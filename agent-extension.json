@@ -61,8 +61,10 @@
     "changelog": "https://github.com/mintbot-ai/mintbot-mcp/releases/tag/v0.1.0",
     "artifact": {
       "url": "https://github.com/mintbot-ai/mintbot-mcp/releases/download/v0.1.0/mintbot-mcp-0.1.0.tar.gz",
-      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
-    }
+      "sha256": "2f190d4b3472f1cd0beba62a255e413361dd5727a8917bfe181eedc8e1ada4db"
+    },
+    "published_at": "2026-09-25T19:30:40Z",
+    "valid_until": "2027-03-24T19:30:40Z"
   },
   "updates": {
     "source": {
@@ -89,7 +91,7 @@
       "delivery": {
         "method": "archive",
         "url": "https://github.com/mintbot-ai/mintbot-mcp/releases/download/v0.1.0/mintbot-mcp-0.1.0.tar.gz",
-        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        "sha256": "2f190d4b3472f1cd0beba62a255e413361dd5727a8917bfe181eedc8e1ada4db"
       },
       "lifecycle": {
         "install": "install.sh",
@@ -108,5 +110,6 @@
         }
       }
     }
-  ]
+  ],
+  "signature": "UzWZFvkSkzeH8fCJryn140WPG4vcu19XzxNieJfdBK4WXGOhRBfwe7s4b8Cl84YUc3MpqC3agE2ZfTjhqzXEDQ=="
 }
