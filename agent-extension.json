@@ -1,0 +1,112 @@
+{
+  "spec_version": "0.4",
+  "kind": "agent-extension",
+  "identity": {
+    "publisher": "mintbot.ai",
+    "name": "mintbot-mcp",
+    "version": "0.1.0",
+    "display_name": "mintbot MCP server",
+    "description": "An MCP server on the agent's own VPS: chat with the agent and manage every mintbot setting (model, persona, name, credit, jobs, extensions, Telegram bot, updates, SSH keys, two-factor) from any MCP client such as Claude Desktop, Claude Code or Cursor. No central server involved; loopback only, bearer-authenticated.",
+    "author": "mintbot.ai",
+    "license": "MIT",
+    "homepage": "https://github.com/mintbot-ai/mintbot-mcp",
+    "keywords": [
+      "mcp",
+      "model-context-protocol",
+      "mintbot",
+      "hermes",
+      "remote-control"
+    ]
+  },
+  "provides": {
+    "services": [
+      {
+        "name": "mcp",
+        "kind": "daemon",
+        "summary": "Streamable-HTTP MCP server on loopback (bearer-authenticated): chat with the agent and read or change every mintbot setting.",
+        "endpoint": "http://127.0.0.1:8650/mcp"
+      }
+    ]
+  },
+  "requires": {
+    "resources": {
+      "disk_mb": 80,
+      "ram_mb": 128
+    }
+  },
+  "permissions": {
+    "network_egress": [
+      "pypi.org:443",
+      "files.pythonhosted.org:443",
+      "api.mintbot.ai:443",
+      "api.mintbot.dev:443"
+    ],
+    "network_ingress": [
+      "127.0.0.1:8650/tcp"
+    ],
+    "filesystem": [
+      "config:r",
+      "state:rw"
+    ],
+    "root": false,
+    "reason": {
+      "network_egress": "install.sh pip-installs the pinned dependencies (mcp, httpx, uvicorn, pyyaml) into a private virtualenv under the install prefix (PyPI); at runtime only the display name, the credit balance and the model catalog are read from the mintbot API, exactly as the agent's own tools do.",
+      "network_ingress": "The MCP endpoint itself: HTTP on 127.0.0.1:8650, never on a public interface, every request except /health must carry the bearer token created at install.",
+      "filesystem": "config:r = the Hermes home is read for the API server key and the mintbot block of config.yaml (agent id, panel token); state:rw = the bearer token (mode 0600) lives in the extension state dir. Settings are changed through the panel-local daemon on loopback, never by editing files.",
+      "runtime": "Chat turns go to the Hermes API server on loopback and run as the agent's own turns (same model, same credit); the daemon holds no LLM credentials of its own."
+    }
+  },
+  "release": {
+    "channel": "beta",
+    "changelog": "https://github.com/mintbot-ai/mintbot-mcp/releases/tag/v0.1.0",
+    "artifact": {
+      "url": "https://github.com/mintbot-ai/mintbot-mcp/releases/download/v0.1.0/mintbot-mcp-0.1.0.tar.gz",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  },
+  "updates": {
+    "source": {
+      "kind": "github",
+      "repo": "mintbot-ai/mintbot-mcp"
+    },
+    "check": "daily",
+    "policy": "notify"
+  },
+  "signing": {
+    "public_key": "ed25519:MGWTLv6h0j5d3mUnWZc0MzwZkhJQcmYVkJUMSLCXFno=",
+    "key_id": "mintbot.ai-mintbot-mcp-2026",
+    "next_key": null
+  },
+  "targets": [
+    {
+      "runtime": "hermes",
+      "runtime_version": ">=0.18.2",
+      "platforms": [
+        "linux/amd64",
+        "linux/arm64"
+      ],
+      "enforcement": "advisory",
+      "delivery": {
+        "method": "archive",
+        "url": "https://github.com/mintbot-ai/mintbot-mcp/releases/download/v0.1.0/mintbot-mcp-0.1.0.tar.gz",
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "lifecycle": {
+        "install": "install.sh",
+        "upgrade": "upgrade.sh",
+        "uninstall": "uninstall.sh",
+        "health": "healthcheck.sh"
+      },
+      "component_map": {
+        "services": {
+          "command": [
+            "bin/mintbot-mcp",
+            "serve"
+          ],
+          "restart": "always",
+          "health": "http://127.0.0.1:8650/health"
+        }
+      }
+    }
+  ]
+}

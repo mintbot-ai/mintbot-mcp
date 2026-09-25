@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mintbot-mcp"
+version = "0.1.0"
+description = "MCP server for a mintbot agent: chat with the agent and manage its settings from any MCP client, running on the agent's own VPS."
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.11"
+dependencies = [
+  "mcp>=2.2,<3",
+  "httpx>=0.27,<1",
+  "uvicorn>=0.30,<1",
+  "pyyaml>=6,<7",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "pytest-asyncio>=0.23", "jsonschema>=4"]
+
+[project.scripts]
+mintbot-mcp = "mintbot_mcp.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["mintbot_mcp*"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

@@ -1,0 +1,6 @@
+# Runtime pins for the private virtualenv install.sh creates. Bump deliberately
+# and cut a release: hosts verify the artifact digest, so this file is part of it.
+mcp==2.2.0
+httpx==0.28.1
+uvicorn==0.54.0
+pyyaml>=6,<7

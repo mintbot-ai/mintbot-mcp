@@ -1,0 +1,19 @@
+{
+  "publisher": "mintbot.ai",
+  "keys": [
+    {
+      "public_key": "ed25519:m5vaq2/BLL372gVnVljTkdS+TeYjkpyduQ7/zk/gHbk=",
+      "key_id": "mintbot.ai-graph-memory-2026",
+      "extensions": [
+        "graph-memory"
+      ]
+    },
+    {
+      "public_key": "ed25519:MGWTLv6h0j5d3mUnWZc0MzwZkhJQcmYVkJUMSLCXFno=",
+      "key_id": "mintbot.ai-mintbot-mcp-2026",
+      "extensions": [
+        "mintbot-mcp"
+      ]
+    }
+  ]
+}
