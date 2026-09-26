@@ -4,7 +4,7 @@
   "identity": {
     "publisher": "mintbot.ai",
     "name": "mintbot-mcp",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "display_name": "mintbot MCP server",
     "description": "An MCP server on the agent's own VPS: chat with the agent and manage every mintbot setting (model, persona, name, credit, jobs, extensions, Telegram bot, updates, SSH keys, two-factor) from any MCP client such as Claude Desktop, Claude Code or Cursor. No central server involved; loopback only, bearer-authenticated.",
     "author": "mintbot.ai",
@@ -24,7 +24,11 @@
         "name": "mcp",
         "kind": "daemon",
         "summary": "Streamable-HTTP MCP server on loopback (bearer-authenticated): chat with the agent and read or change every mintbot setting.",
-        "endpoint": "http://127.0.0.1:8650/mcp"
+        "endpoint": "http://127.0.0.1:8650/mcp",
+        "auth": {
+          "scheme": "bearer",
+          "token_file": "state:token"
+        }
       }
     ]
   },
@@ -60,11 +64,11 @@
     "channel": "beta",
     "changelog": "https://github.com/mintbot-ai/mintbot-mcp/releases/tag/v0.1.0",
     "artifact": {
-      "url": "https://github.com/mintbot-ai/mintbot-mcp/releases/download/v0.1.0/mintbot-mcp-0.1.0.tar.gz",
-      "sha256": "2f190d4b3472f1cd0beba62a255e413361dd5727a8917bfe181eedc8e1ada4db"
+      "url": "https://github.com/mintbot-ai/mintbot-mcp/releases/download/v0.1.1/mintbot-mcp-0.1.1.tar.gz",
+      "sha256": "cc974bf36a2ead798f6ecc4076876d467215d3cfec582ab091e32059d90d079c"
     },
-    "published_at": "2026-09-25T19:30:40Z",
-    "valid_until": "2027-03-24T19:30:40Z"
+    "published_at": "2026-09-26T12:26:47Z",
+    "valid_until": "2027-03-25T12:26:47Z"
   },
   "updates": {
     "source": {
@@ -90,8 +94,8 @@
       "enforcement": "advisory",
       "delivery": {
         "method": "archive",
-        "url": "https://github.com/mintbot-ai/mintbot-mcp/releases/download/v0.1.0/mintbot-mcp-0.1.0.tar.gz",
-        "sha256": "2f190d4b3472f1cd0beba62a255e413361dd5727a8917bfe181eedc8e1ada4db"
+        "url": "https://github.com/mintbot-ai/mintbot-mcp/releases/download/v0.1.1/mintbot-mcp-0.1.1.tar.gz",
+        "sha256": "cc974bf36a2ead798f6ecc4076876d467215d3cfec582ab091e32059d90d079c"
       },
       "lifecycle": {
         "install": "install.sh",
@@ -111,5 +115,5 @@
       }
     }
   ],
-  "signature": "UzWZFvkSkzeH8fCJryn140WPG4vcu19XzxNieJfdBK4WXGOhRBfwe7s4b8Cl84YUc3MpqC3agE2ZfTjhqzXEDQ=="
+  "signature": "+X9l19xQC/K2kCEBNfPLNlbLa/7J9JoQf7j6T6sCLaybW5oCV3nMq8YYvU2eWvfHq1dT9sIadeBpW1NnCEqqAA=="
 }

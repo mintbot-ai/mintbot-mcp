@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.1.1 (2026-09-26)
+
+- The `mcp` service now declares its endpoint access in the manifest
+  (`auth: {scheme: bearer, token_file: state:token}`, AXP v0.4 "Endpoint
+  access", SPEC 4.2), so a host can register the server in its runtime MCP
+  config with the bearer header filled in and show the owner a ready-made
+  client entry. No runtime change: the token file and its location are the
+  same as before.
+
 ## v0.1.0 (2026-09-25)
 
 - First release: an MCP server (streamable HTTP + stdio) that runs on the
