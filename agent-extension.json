@@ -1,12 +1,12 @@
 {
-  "spec_version": "0.4",
+  "spec_version": "0.5",
   "kind": "agent-extension",
   "identity": {
     "publisher": "mintbot.ai",
     "name": "mintbot-mcp",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "display_name": "mintbot MCP server",
-    "description": "An MCP server on the agent's own VPS: chat with the agent and manage every mintbot setting (model, persona, name, credit, jobs, extensions, Telegram bot, updates, SSH keys, two-factor) from any MCP client such as Claude Desktop, Claude Code or Cursor. No central server involved; loopback only, bearer-authenticated.",
+    "description": "An MCP server on your agent's own server: chat with the agent and manage its settings from Claude Desktop, Claude Code, Cursor or any MCP client.",
     "author": "mintbot.ai",
     "license": "MIT",
     "homepage": "https://github.com/mintbot-ai/mintbot-mcp",
@@ -30,7 +30,18 @@
           "token_file": "state:token"
         }
       }
-    ]
+    ],
+    "settings_section": {
+      "title": "MCP server",
+      "summary": "Connect Claude Desktop, Claude Code, Cursor or any other MCP client to your agent: chat with it and read or change its settings from there. Loopback only, behind a bearer token.",
+      "icon": "plug",
+      "localized": {
+        "et": {
+          "title": "MCP-server",
+          "summary": "Ühenda Claude Desktop, Claude Code, Cursor või mõni muu MCP-klient oma agendiga: vestle temaga ja vaata või muuda sealt tema seadeid. Ainult loopback, bearer-tokeni taga."
+        }
+      }
+    }
   },
   "requires": {
     "resources": {
@@ -62,13 +73,13 @@
   },
   "release": {
     "channel": "beta",
-    "changelog": "https://github.com/mintbot-ai/mintbot-mcp/releases/tag/v0.1.0",
+    "changelog": "https://github.com/mintbot-ai/mintbot-mcp/releases/tag/v0.1.2",
     "artifact": {
-      "url": "https://github.com/mintbot-ai/mintbot-mcp/releases/download/v0.1.1/mintbot-mcp-0.1.1.tar.gz",
-      "sha256": "cc974bf36a2ead798f6ecc4076876d467215d3cfec582ab091e32059d90d079c"
+      "url": "https://github.com/mintbot-ai/mintbot-mcp/releases/download/v0.1.2/mintbot-mcp-0.1.2.tar.gz",
+      "sha256": "ac7bc208094044fa5a1f9e2f9256c0019084783b390f1293e890ba2c2a1a3522"
     },
-    "published_at": "2026-09-26T12:26:47Z",
-    "valid_until": "2027-03-25T12:26:47Z"
+    "published_at": "2026-10-15T00:47:01Z",
+    "valid_until": "2027-04-13T00:47:01Z"
   },
   "updates": {
     "source": {
@@ -94,8 +105,8 @@
       "enforcement": "advisory",
       "delivery": {
         "method": "archive",
-        "url": "https://github.com/mintbot-ai/mintbot-mcp/releases/download/v0.1.1/mintbot-mcp-0.1.1.tar.gz",
-        "sha256": "cc974bf36a2ead798f6ecc4076876d467215d3cfec582ab091e32059d90d079c"
+        "url": "https://github.com/mintbot-ai/mintbot-mcp/releases/download/v0.1.2/mintbot-mcp-0.1.2.tar.gz",
+        "sha256": "ac7bc208094044fa5a1f9e2f9256c0019084783b390f1293e890ba2c2a1a3522"
       },
       "lifecycle": {
         "install": "install.sh",
@@ -115,5 +126,5 @@
       }
     }
   ],
-  "signature": "+X9l19xQC/K2kCEBNfPLNlbLa/7J9JoQf7j6T6sCLaybW5oCV3nMq8YYvU2eWvfHq1dT9sIadeBpW1NnCEqqAA=="
+  "signature": "976UpJymGVQVo8paKLGVSqYV+IS4QjlsDKwkNY0D2XiXm2CVdw7aLptAuKN9lDqUhjXzZ5TCle60DZGuEYojDw=="
 }

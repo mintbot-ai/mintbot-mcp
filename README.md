@@ -70,8 +70,12 @@ code mints a panel session that the daemon keeps in memory until
 
 ### On a mintbot agent (AXP host)
 
-In chat: *"install mintbot-mcp"* (or the GitHub URL), or use the panel's
-extensions card. The host shows the consent card, verifies the artifact digest
+In the agent panel: Settings -> **MCP server**, one switch. Its first
+switch-on installs the server through the consent card (turning agent
+extensions on first when they are off); the card then shows the connection
+settings - endpoint, bearer token, SSH tunnel and a ready-to-paste client
+configuration. Or in chat: *"install mintbot-mcp"* (or the GitHub URL), or
+the Install box in Settings -> Extensions. The host shows the consent card, verifies the artifact digest
 and the ed25519 signature, runs the lifecycle hooks in its sandbox, writes and
 contains the systemd unit itself (the manifest binds the daemon with a
 `command`), and keeps the extension updated from GitHub releases.
@@ -84,6 +88,7 @@ What the consent card shows, and why:
 | `network_ingress` `127.0.0.1:8650/tcp` | the MCP endpoint itself, loopback only |
 | `filesystem` `config:r`, `state:rw` | reads the Hermes home (API key, `mintbot:` block of `config.yaml`); writes only the bearer token into its state dir |
 | `root: false` | the install prefix and state dir come from the host |
+| `settings_section` "MCP server" | AXP 0.5: the host's own settings page for the extension takes its title and summary (Estonian shipped) from here; the server has no panel view |
 | signed by `mintbot.ai-mintbot-mcp-2026` | `ed25519:MGWTLv6h0j5d3mUnWZc0MzwZkhJQcmYVkJUMSLCXFno=`, listed in the publisher directory at `https://mintbot.ai/.well-known/agent-extension-keys.json` |
 
 ### Standalone (no AXP host)

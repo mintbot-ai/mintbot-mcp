@@ -44,6 +44,19 @@ for path, pattern in (
     path.write_text(new, encoding="utf-8")
 PY
 
+# The release notes live on the GitHub release of this very version; `axp
+# release` refreshes the artifact URLs but not this one.
+python3 - "${ROOT}/agent-extension.json" "${VERSION}" <<'PY'
+import json
+import pathlib
+import sys
+
+path, version = pathlib.Path(sys.argv[1]), sys.argv[2]
+data = json.loads(path.read_text(encoding="utf-8"))
+data.setdefault("release", {})["changelog"] = f"https://github.com/mintbot-ai/mintbot-mcp/releases/tag/v{version}"
+path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+PY
+
 ARTIFACT="$("${ROOT}/scripts/build-artifact.sh" "${VERSION}" | cut -d" " -f3)"
 axp release "${ROOT}/agent-extension.json" \
   --version "${VERSION}" \

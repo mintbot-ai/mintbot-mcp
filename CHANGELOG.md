@@ -1,5 +1,22 @@
 # Changelog
 
+## v0.1.2 (2026-10-15)
+
+- The manifest moves to AXP 0.5 and declares a `settings_section` ("MCP
+  server"): a host with a settings page of its own per extension - the mintbot
+  panel's Settings -> MCP server - takes its title and summary from here, in
+  the user's language where a translation is shipped. The panel's switch there
+  installs the server through the usual consent card and shows the connection
+  settings (endpoint, token, SSH tunnel, ready-to-paste client configuration).
+- The launcher bakes in the state dir the installer was given, so
+  `mintbot-mcp token`, `client-config` and `token --rotate` run by hand on an
+  AXP host read the daemon's token instead of the standalone default path.
+- `release.changelog` points at the release of the version it ships with
+  (v0.1.1 still pointed at v0.1.0); `scripts/release.sh` stamps it.
+- The publisher key directory copy carries every mintbot.ai key (the
+  Desktop's too): the same document mintbot.ai serves.
+- A one-sentence description, which the panel translates.
+
 ## v0.1.1 (2026-09-26)
 
 - The `mcp` service now declares its endpoint access in the manifest

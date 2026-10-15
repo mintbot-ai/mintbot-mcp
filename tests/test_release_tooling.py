@@ -193,6 +193,9 @@ def test_install_under_an_axp_host_converges_and_leaves_the_daemon_to_the_host(t
         assert os.access(prefix / name, os.X_OK), name
     launcher = (prefix / "bin" / "mintbot-mcp").read_text(encoding="utf-8")
     assert f'PYTHONPATH="{prefix}/lib' in launcher and f'exec "{prefix}/venv/bin/python" -m mintbot_mcp "$@"' in launcher
+    # Run by hand on an AXP host, the CLI must find the daemon's token, not
+    # the standalone default path: the installer's state dir is the default.
+    assert f': "${{AXP_STATE_DIR:={tmp_path / "state"}}}"' in launcher and 'export AXP_STATE_DIR' in launcher
 
     log = _log(env)
     assert f"-r {REPO}/requirements.txt" in log.replace("--requirement", "-r") or "--requirement" in log
@@ -218,6 +221,10 @@ def test_launcher_runs_the_installed_package(tmp_path, installed):
     result = subprocess.run([str(tmp_path / "prefix" / "bin" / "mintbot-mcp"), "--version"], env=env, capture_output=True, text=True)
     assert result.returncode == 0 and result.stdout.startswith("mintbot-mcp ")
     result = subprocess.run([str(tmp_path / "prefix" / "bin" / "mintbot-mcp"), "token"], env=env, capture_output=True, text=True)
+    assert result.stdout.strip() == (tmp_path / "state" / "token").read_text().strip()
+    # Without AXP_STATE_DIR in the environment (a shell on the host), the same token.
+    bare = {k: v for k, v in env.items() if k != "AXP_STATE_DIR"}
+    result = subprocess.run([str(tmp_path / "prefix" / "bin" / "mintbot-mcp"), "token"], env=bare, capture_output=True, text=True)
     assert result.stdout.strip() == (tmp_path / "state" / "token").read_text().strip()
 
 

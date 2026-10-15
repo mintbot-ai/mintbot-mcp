@@ -42,7 +42,27 @@ def test_manifest_validates_with_reference_implementation():
     assert summary["ext_id"] == "mintbot.ai/mintbot-mcp"
     assert summary["publisher_derived"] is False
     assert summary["runtimes"] == ["hermes"]
-    assert list(summary["provides"]) == ["services"]
+    assert list(summary["provides"]) == ["services", "settings_section"]
+
+
+def test_manifest_speaks_axp_0_5_with_a_settings_section_of_its_own():
+    """SPEC 0.5 provides.settings_section: a host with a settings page per
+    extension (the mintbot panel's Settings -> MCP server) takes its title and
+    summary from here, in the user's language where one is shipped. The
+    server has no panel view, so the section names none."""
+    m = manifest()
+    assert m["spec_version"] == "0.5"
+    section = m["provides"]["settings_section"]
+    assert section["title"] == "MCP server"
+    assert "MCP client" in section["summary"] and len(section["summary"]) <= 400
+    assert section["icon"] == "plug" and "views" not in section
+    assert set(section["localized"]) == {"et"}
+    assert section["localized"]["et"]["title"] == "MCP-server"
+    axp_settings = pytest.importorskip("axp.settings_section")
+    assert axp_settings.validate_settings_section(m["provides"]) == section
+    # The panel translates the description word for word: keep it to one sentence.
+    description = m["identity"]["description"]
+    assert description.count(". ") == 0 and description.endswith(".") and len(description) <= 200
 
 
 def test_one_version_everywhere():
