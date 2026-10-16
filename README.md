@@ -107,6 +107,46 @@ host contract (`AXP_PREFIX`, `AXP_STATE_DIR`, `AXP_CACHE_DIR`, `AXP_PURGE`,
 `AXP_FROM_VERSION`) and fall back to the spec defaults when the variables are
 absent. `uninstall.sh` keeps the token (`AXP_PURGE=1` deletes it too).
 
+### Transactional upgrades
+
+`install.sh` and `upgrade.sh` build a complete candidate under
+`$AXP_PREFIX/releases/release.<unique-id>/`: package, lifecycle hooks, and a
+**new private virtualenv**. Pip never modifies the active environment. The
+directory is already at its final path before venv creation and pip run, so
+absolute interpreter paths in console-script shebangs remain valid.
+
+The candidate's `healthcheck.sh --offline` imports the server, HTTP app and
+runtime dependencies, and checks its CLI before activation. It needs no running
+daemon, backend connection or token. The ordinary health hook still checks the
+running daemon. A successful offline check is not a claim that the agent's
+backends or the post-restart service are healthy.
+
+Activation atomically replaces the `current` symlink. The stable
+`bin/mintbot-mcp` launcher and root lifecycle-hook paths stay compatible; each
+release's launcher pins its code and interpreter to the same release. Installers
+are serialized with `flock`. Failed staging removes only the candidate; errors
+during activation (including standalone service operations) restore the previous
+entrypoints and unit file. Catchable termination signals also roll back. If
+rollback itself fails, the hook fails loudly and retains the candidate and
+transaction backups for operator recovery. This is not power-loss/SIGKILL
+recovery, and does not undo a host's later post-hook actions.
+
+Existing flat installs migrate without moving or modifying their old `lib/` and
+`venv/` directories; this preserves old absolute shebangs and running processes.
+The launcher and health hook use `current` after migration. Fresh installs also
+expose compatibility `lib` and `venv` symlinks to `current`. Old releases and legacy
+directories are deliberately retained, not automatically pruned while a process
+could still use them. Remove an obsolete release only after verifying nothing
+uses it; `uninstall.sh` removes the entire prefix as before. Re-running the
+installed root hooks stages from the selected release, not the legacy files.
+
+Upgrades preserve the existing token and other state data. Under `AXP_HOST`,
+the installer never starts/enables a service or edits host enablement/policy:
+a disabled extension stays under the host's control. Standalone upgrades restart
+only a previously active unit and preserve existing enablement/stopped state;
+only a first standalone installation enables and starts its new unit.
+The shell lifecycle tools target Linux (Bash, GNU coreutils and `flock`).
+
 The daemon expects a mintbot agent VPS: the Hermes API server on `:8642`
 (`API_SERVER_KEY` in `$HERMES_HOME/env`) and `mintbot-panel-local` on `:8643`.
 `mintbot-mcp check` tells you which backends it can reach.

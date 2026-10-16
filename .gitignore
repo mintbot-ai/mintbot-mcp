@@ -3,6 +3,7 @@ __pycache__/
 *.py[cod]
 *.egg-info/
 .pytest_cache/
+.test-tmp/
 build/
 
 # release artifacts and signing keys never enter the repo

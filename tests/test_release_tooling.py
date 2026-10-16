@@ -134,7 +134,7 @@ def test_build_artifact_is_deterministic_and_contains_only_the_runtime_files(tmp
 
 def test_build_artifact_refuses_when_a_runtime_file_is_missing(tmp_path):
     clone = tmp_path / "clone"
-    shutil.copytree(REPO, clone, ignore=shutil.ignore_patterns(".git", ".venv", "dist", "__pycache__", "tests", "*.pyc", "*.egg-info"))
+    shutil.copytree(REPO, clone, ignore=shutil.ignore_patterns(".git", ".venv", ".test-tmp", "dist", "__pycache__", "tests", "*.pyc", "*.egg-info"))
     (clone / "LICENSE").unlink()
     result = _run(clone / "scripts" / "build-artifact.sh", "1.0.0", str(tmp_path / "out"), env=_env(tmp_path), cwd=clone)
     assert result.returncode == 1 and "missing LICENSE" in result.stderr
@@ -192,7 +192,8 @@ def test_install_under_an_axp_host_converges_and_leaves_the_daemon_to_the_host(t
     for name in ("install.sh", "upgrade.sh", "uninstall.sh", "healthcheck.sh", "bin/mintbot-mcp"):
         assert os.access(prefix / name, os.X_OK), name
     launcher = (prefix / "bin" / "mintbot-mcp").read_text(encoding="utf-8")
-    assert f'PYTHONPATH="{prefix}/lib' in launcher and f'exec "{prefix}/venv/bin/python" -m mintbot_mcp "$@"' in launcher
+    release = (prefix / "current").resolve()
+    assert f'PYTHONPATH="{release}/lib' in launcher and f'exec "{release}/venv/bin/python" -m mintbot_mcp "$@"' in launcher
     # Run by hand on an AXP host, the CLI must find the daemon's token, not
     # the standalone default path: the installer's state dir is the default.
     assert f': "${{AXP_STATE_DIR:={tmp_path / "state"}}}"' in launcher and 'export AXP_STATE_DIR' in launcher
@@ -208,11 +209,13 @@ def test_install_under_an_axp_host_converges_and_leaves_the_daemon_to_the_host(t
     assert oct(token.stat().st_mode & 0o777) == "0o600"
     assert oct((tmp_path / "state").stat().st_mode & 0o777) == "0o700"
 
-    # Idempotent: a second run converges, keeps the token and the venv.
+    # A second run converges into a new runtime and keeps the existing token.
+    original_token = token.read_bytes()
     (prefix / "lib" / "mintbot_mcp" / "stale.py").write_text("# from an older version\n")
     again = _run(REPO / "install.sh", env=env)
     assert again.returncode == 0, again.stderr
-    assert token.read_text() == token.read_text() and not (prefix / "lib" / "mintbot_mcp" / "stale.py").exists()
+    assert token.read_bytes() == original_token and not (prefix / "lib" / "mintbot_mcp" / "stale.py").exists()
+    assert (prefix / "current").resolve() != release and release.is_dir()
     assert _log(env).count("venv") == 0, "the fake venv logs nothing; pip must have run twice"
 
 

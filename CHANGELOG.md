@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+- Stage the package and a separate dependency runtime at a permanent release
+  path, validate them offline, then atomically switch the active release.
+  Pip/copy/healthcheck failures leave the previous installation usable; activation
+  and standalone service failures restore the previous entrypoints and unit.
+- Preserve legacy runtime paths during migration, stable launcher/lifecycle hook
+  paths, existing tokens and user data, and host-owned disabled state. Standalone
+  upgrades no longer enable or start an intentionally stopped service.
+- Add hermetic failure-injection, migration, absolute-shebang and extracted-release
+  install/upgrade coverage. No service or real extension install is used in tests.
+
 ## v0.1.2 (2026-10-15)
 
 - The manifest moves to AXP 0.5 and declares a `settings_section` ("MCP

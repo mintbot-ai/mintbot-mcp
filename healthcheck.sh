@@ -37,15 +37,25 @@ HOST_UNIT="mintbot-ext-${PUBLISHER}-${NAME}-svc-mcp.service"
 PORT="${MINTBOT_MCP_PORT:-8650}"
 
 [ -x "${LAUNCHER}" ] || unhealthy "launcher is not installed at ${LAUNCHER}"
-[ -x "${PREFIX}/venv/bin/python" ] || unhealthy "virtualenv is missing under ${PREFIX}/venv"
-PYTHONPATH="${PREFIX}/lib" "${PREFIX}/venv/bin/python" -c 'import mintbot_mcp.server' 2>/dev/null \
+# Resolve once, so code and runtime cannot straddle an atomic upgrade.
+RUNTIME="${PREFIX}"
+[ ! -L "${PREFIX}/current" ] || RUNTIME="$(readlink -f "${PREFIX}/current")"
+[ -x "${RUNTIME}/venv/bin/python" ] || unhealthy "virtualenv is missing under ${RUNTIME}/venv"
+# Never import from the caller's checkout instead of the candidate package.
+(cd "${RUNTIME}" && PYTHONPATH="${RUNTIME}/lib" "${RUNTIME}/venv/bin/python" -c 'import mintbot_mcp.server, mintbot_mcp.app, uvicorn') \
   || unhealthy "the package or its dependencies do not import"
+# Install-time validation is offline: no daemon/backend or token is required.
+if [ "${1:-}" = "--offline" ]; then
+  "${RUNTIME}/bin/mintbot-mcp" --version >/dev/null
+  printf 'ok: package and runtime validated\n'
+  exit 0
+fi
 [ -s "${STATE_DIR}/token" ] || unhealthy "bearer token is missing at ${STATE_DIR}/token"
 
 # The daemon answers /health without a token. A sandboxed hook may not be
 # allowed to reach loopback at all, which says nothing about the daemon; only
 # a refused connection does.
-probe="$("${PREFIX}/venv/bin/python" - "${PORT}" <<'PY'
+probe="$("${RUNTIME}/venv/bin/python" - "${PORT}" <<'PY'
 import json
 import sys
 import urllib.error
