@@ -4,7 +4,7 @@
   "identity": {
     "publisher": "mintbot.ai",
     "name": "mintbot-mcp",
-    "version": "0.1.2",
+    "version": "0.1.3",
     "display_name": "mintbot MCP server",
     "description": "An MCP server on your agent's own server: chat with the agent and manage its settings from Claude Desktop, Claude Code, Cursor or any MCP client.",
     "author": "mintbot.ai",
@@ -73,13 +73,13 @@
   },
   "release": {
     "channel": "beta",
-    "changelog": "https://github.com/mintbot-ai/mintbot-mcp/releases/tag/v0.1.2",
+    "changelog": "https://github.com/mintbot-ai/mintbot-mcp/releases/tag/v0.1.3",
     "artifact": {
-      "url": "https://github.com/mintbot-ai/mintbot-mcp/releases/download/v0.1.2/mintbot-mcp-0.1.2.tar.gz",
-      "sha256": "ac7bc208094044fa5a1f9e2f9256c0019084783b390f1293e890ba2c2a1a3522"
+      "url": "https://github.com/mintbot-ai/mintbot-mcp/releases/download/v0.1.3/mintbot-mcp-0.1.3.tar.gz",
+      "sha256": "d8c0ecb9a78e85fb0b1aded0653d73274da49a2269d300b65aaf80f5e567832d"
     },
-    "published_at": "2026-10-15T00:47:01Z",
-    "valid_until": "2027-04-13T00:47:01Z"
+    "published_at": "2026-10-16T15:25:41Z",
+    "valid_until": "2027-04-14T15:25:41Z"
   },
   "updates": {
     "source": {
@@ -105,8 +105,8 @@
       "enforcement": "advisory",
       "delivery": {
         "method": "archive",
-        "url": "https://github.com/mintbot-ai/mintbot-mcp/releases/download/v0.1.2/mintbot-mcp-0.1.2.tar.gz",
-        "sha256": "ac7bc208094044fa5a1f9e2f9256c0019084783b390f1293e890ba2c2a1a3522"
+        "url": "https://github.com/mintbot-ai/mintbot-mcp/releases/download/v0.1.3/mintbot-mcp-0.1.3.tar.gz",
+        "sha256": "d8c0ecb9a78e85fb0b1aded0653d73274da49a2269d300b65aaf80f5e567832d"
       },
       "lifecycle": {
         "install": "install.sh",
@@ -126,5 +126,5 @@
       }
     }
   ],
-  "signature": "976UpJymGVQVo8paKLGVSqYV+IS4QjlsDKwkNY0D2XiXm2CVdw7aLptAuKN9lDqUhjXzZ5TCle60DZGuEYojDw=="
+  "signature": "lLCt7z93Tv1e5EtZWc/rlvo+MOz8HAQTHC3gNhOWoyrJvogNLCdQH/ajvWBhgvKvBX1Qnoli7lcDZ9q0QlU/BA=="
 }
