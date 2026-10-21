@@ -49,6 +49,11 @@ def state_dir() -> Path:
     return Path.home() / ".local" / "state" / "axp" / PUBLISHER / NAME
 
 
+def grants_file() -> Path:
+    """Dedicated private directory so tightening permissions never changes shared AXP state."""
+    return state_dir() / 'access' / 'grants.json'
+
+
 def token_file() -> Path:
     value = os.environ.get("MINTBOT_MCP_TOKEN_FILE")
     return Path(value) if value else state_dir() / "token"
