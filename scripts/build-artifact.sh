@@ -18,10 +18,10 @@ OUT="${OUT_DIR}/mintbot-mcp-${VERSION}.tar.gz"
 RUNTIME_FILES=(
   mintbot_mcp/__init__.py mintbot_mcp/__main__.py mintbot_mcp/app.py mintbot_mcp/auth.py
   mintbot_mcp/backends.py mintbot_mcp/chat.py mintbot_mcp/cli.py mintbot_mcp/config.py
-  mintbot_mcp/server.py
+  mintbot_mcp/server.py mintbot_mcp/access.py mintbot_mcp/notifications.py mintbot_mcp/idempotency.py
   pyproject.toml requirements.txt
   install.sh upgrade.sh uninstall.sh healthcheck.sh
-  README.md LICENSE after-install.md
+  README.md LICENSE after-install.md docs/access.md
 )
 
 for f in "${RUNTIME_FILES[@]}"; do

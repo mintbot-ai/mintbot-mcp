@@ -12,7 +12,7 @@ mintbot-mcp access revoke GRANT_ID
 
 `issue` prints JSON containing the grant ID, expiry (Unix timestamp), policy and a
 `token`. The token is shown only once. Put that token, not the owner token, in the
-client's `Authorization: Bearer ...` header. Use TLS when connecting remotely.
+client's `Authorization` header with the `Bearer` scheme. Use TLS remotely.
 Revoking an unknown ID exits with status 2. Lifetime accepts an integer number of
 seconds or an integer followed by `s`, `m`, `h`, `d`; it is required and capped at
 365 days. Reissue rather than extending or silently refreshing a grant.
@@ -66,10 +66,11 @@ Local stdio is trusted owner access, not a way to apply an HTTP grant.
 
 After successful authenticated MCP `initialize`, the daemon posts a bounded notice
 to the panel-local companion's `POST /mcp/connections`, authenticated with the
-existing server-to-server API key. Notices include credential ID/name (never its
-secret), client name/version (untrusted client claims, at most 128 printable
-characters each), a random connection ID, observed peer and provenance. The
-platform endpoint owns deduplication and private owner delivery. Notification
+active rotating local identity. The request carries a nonsecret credential ID,
+client name (at most 128 printable characters), version (at most 80) and observed
+socket peer (at most 64). The endpoint stores a credential digest and timestamps,
+not bearer tokens or arbitrary client metadata. The platform endpoint owns
+durable deduplication and private owner delivery. Notification
 failure cannot block MCP access and logs only a fixed secret-free message.
 
 The observed peer is the ASGI socket client, **not** an asserted public client IP.

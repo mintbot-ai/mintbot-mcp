@@ -89,6 +89,22 @@ class Settings:
     token_file: Path
     host: str = DEFAULT_HOST
     port: int = DEFAULT_PORT
+    local_credentials_file: Path | None = None
+
+    def local_key(self) -> str:
+        """Read the current local identity on every call, including activated rotations."""
+        if self.local_credentials_file is None:
+            return self.hermes_api_key
+        import json
+        try:
+            state = json.loads(self.local_credentials_file.read_text(encoding="utf-8"))
+            entry = state["pending"] if state.get("activated") else state["current"]
+            key = entry["hermes"]
+            if not isinstance(key, str) or not key:
+                raise ValueError("empty local identity")
+            return key
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            raise ConfigError("active local identity is unavailable") from exc
 
     @property
     def central_available(self) -> bool:
@@ -127,6 +143,8 @@ def load_settings(*, home: Path | None = None) -> Settings:
         token_file=token_file(),
         host=os.environ.get("MINTBOT_MCP_HOST") or DEFAULT_HOST,
         port=int(os.environ.get("MINTBOT_MCP_PORT") or DEFAULT_PORT),
+        local_credentials_file=Path(os.environ.get("MINTBOT_MCP_LOCAL_CREDENTIALS_FILE")
+                                    or "/var/lib/mintbot-agent/security/local_credentials.json"),
     )
 
 

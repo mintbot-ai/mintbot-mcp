@@ -8,6 +8,7 @@ from __future__ import annotations
 import httpx
 
 from .config import Settings
+from .backends import LocalApiClient
 
 
 class ConnectionNotifier:
@@ -16,9 +17,13 @@ class ConnectionNotifier:
         self.transport = transport
 
     async def __call__(self, payload: dict) -> None:
-        # One bounded call; no persistent client or cookie jar to share with TOTP.
-        async with httpx.AsyncClient(base_url=self.settings.local_api_url, timeout=2,
-                                     transport=self.transport, follow_redirects=False,
-                                     headers={'X-Mintbot-Central-Auth': self.settings.hermes_api_key}) as client:
-            response = await client.post('/mcp/connections', json=payload)
-            response.raise_for_status()
+        info = payload.get('client_info') or {}
+        body = {'credential_id': payload['credential_id'],
+                'client_name': info.get('name') or 'Unknown MCP client',
+                'client_version': str(info.get('version') or '')[:80],
+                'peer_address': str(payload.get('peer') or '')[:64]}
+        client = LocalApiClient(self.settings, transport=self.transport)
+        try:
+            await client.project_request('POST', '/mcp/connections', body=body, timeout=2)
+        finally:
+            await client.aclose()

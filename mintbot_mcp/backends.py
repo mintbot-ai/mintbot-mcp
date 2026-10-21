@@ -21,7 +21,8 @@ from typing import Any, AsyncIterator
 
 import httpx
 
-from .config import Settings
+from .config import ConfigError, Settings
+from .access import current_principal
 
 CENTRAL_AUTH_HEADER = "X-Mintbot-Central-Auth"
 SESSION_ID_HEADER = "X-Hermes-Session-Id"
@@ -98,9 +99,11 @@ class HermesClient:
     """The Hermes API server: chat completions with session continuity, session store."""
 
     def __init__(self, settings: Settings, *, transport: httpx.AsyncBaseTransport | None = None) -> None:
+        self._settings = settings
         self._client = httpx.AsyncClient(
             base_url=settings.hermes_url,
             headers={"Authorization": f"Bearer {settings.hermes_api_key}"},
+            event_hooks={"request": [self._authorize]},
             timeout=httpx.Timeout(30.0, read=None),
             transport=transport,
         )
@@ -111,10 +114,22 @@ class HermesClient:
     async def health(self) -> Any:
         return _json(await self._client.get("/health"))
 
+    async def _authorize(self, request: httpx.Request) -> None:
+        try:
+            request.headers["Authorization"] = f"Bearer {self._settings.local_key()}"
+        except ConfigError:
+            raise BackendError("active local identity is unavailable", code="local_identity_unavailable") from None
+
     async def stream_turn(self, message: str, *, session_id: str | None = None) -> AsyncIterator[tuple[str, str]]:
         """Run one agent turn. Yields ``("session", id)`` as soon as Hermes names the
         session, then ``("text", delta)`` for every streamed piece of the reply."""
-        headers = {SESSION_ID_HEADER: session_id} if session_id else {}
+        try:
+            key = self._settings.local_key()
+        except ConfigError:
+            raise BackendError("active local identity is unavailable", code="local_identity_unavailable") from None
+        headers = {"Authorization": f"Bearer {key}"}
+        if session_id:
+            headers[SESSION_ID_HEADER] = session_id
         body = {
             "model": CHAT_MODEL,
             "stream": True,
@@ -163,6 +178,8 @@ class LocalApiClient:
     """mintbot-panel-local on loopback, as the trusted server-to-server caller."""
 
     def __init__(self, settings: Settings, *, transport: httpx.AsyncBaseTransport | None = None) -> None:
+        self._settings = settings
+        self._transport = transport
         self._client = httpx.AsyncClient(
             base_url=settings.local_api_url,
             headers={CENTRAL_AUTH_HEADER: settings.hermes_api_key},
@@ -176,11 +193,25 @@ class LocalApiClient:
 
     @property
     def unlocked(self) -> bool:
-        return self._session_cookie is not None
+        return current_principal().owner and self._session_cookie is not None
+
+    async def project_request(self, method: str, path: str, *, body: Any = None,
+                              params: dict | None = None, timeout: float = 30) -> Any:
+        """Use the narrow machine companion, without browser cookies or legacy authority."""
+        if not path.startswith("/mcp/"):
+            raise BackendError("invalid companion path", code="invalid_argument")
+        try:
+            key = self._settings.local_key()
+        except ConfigError:
+            raise BackendError("active local identity is unavailable", code="local_identity_unavailable") from None
+        async with httpx.AsyncClient(base_url=self._settings.local_api_url, transport=self._transport,
+                                     timeout=timeout, follow_redirects=False,
+                                     headers={"Authorization": f"Bearer {key}"}) as client:
+            return _json(await client.request(method, path, json=body, params=params))
 
     async def request(self, method: str, path: str, *, body: Any = None, params: dict | None = None,
                       timeout: float | None = None) -> Any:
-        headers = {"Cookie": f"{SESSION_COOKIE}={self._session_cookie}"} if self._session_cookie else {}
+        headers = {"Cookie": f"{SESSION_COOKIE}={self._session_cookie}"} if self.unlocked else {}
         kwargs: dict[str, Any] = {"params": params, "headers": headers}
         if body is not None:
             kwargs["json"] = body

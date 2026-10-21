@@ -44,6 +44,7 @@ protocol error: the client gets `{"ok": false, "error": ..., "code": ...}`.
 | group | tools |
 |---|---|
 | chat | `chat_send`, `chat_wait`, `chat_cancel`, `chat_sessions`, `chat_session_messages`, `chat_session_rename`, `chat_session_delete` |
+| projects | `projects_list`, `project_get` |
 | overview | `settings_overview` (everything in one call; also the `mintbot://agent` resource) |
 | model | `model_get`, `models_catalog`, `model_set` |
 | persona | `persona_get`, `persona_set` (replace / append) |
@@ -65,6 +66,43 @@ two-factor gate protects them.
 "second_factor_required"`. `security_unlock` with a current authenticator
 code mints a panel session that the daemon keeps in memory until
 `security_lock` or a restart.
+
+## Project-aware chat and safe retries
+
+Call `projects_list` to discover canonical project IDs. Supply `project_id` to
+`chat_send` when starting a conversation; omitted projects default to `main`,
+never the panel's currently selected project. Continue with the returned
+`session_id`. A conflicting project is rejected rather than moving the session.
+These tools require the updated mintbot platform MCP companion; older platforms
+fail explicitly instead of silently running in the wrong directory.
+
+`chat_sessions` returns compact project-aware rows. Set `include_details=true`
+for backend metadata, or `project_id` to narrow the list. Pagination is bounded
+to the newest 500 sessions per project and refuses offsets outside that window.
+Modern clients receive the full result in `structuredContent` and a short text
+summary instead of a duplicate JSON dump. Older negotiated MCP versions retain
+the SDK's JSON-text compatibility fallback. SSE explicitly declares UTF-8.
+
+For retries, provide a unique `idempotency_key` with `chat_send`. Repeating the
+same key and payload under the same credential cannot start a second agent turn,
+including across concurrent requests and daemon restarts. A changed payload is
+a conflict. After an uncertain restart the outcome is reported as unknown, never
+rerun automatically. Use the returned session/turn IDs to investigate; do not
+retry uncertain work with a fresh key. Dedupe tombstones last as long as the
+private state database. Completed reply bodies expire after 15 minutes, with at
+most 32 persisted replies of at most 256 Ki characters each.
+
+For temporary collaboration, issue a named, expiring grant with explicit tools
+and optional project IDs rather than sharing the owner token. See
+[restricted access and connection notices](docs/access.md). Project selection is
+not a filesystem or LLM-tool sandbox.
+
+Authenticated MCP initialization sends a private owner notice through the
+platform companion to the panel and the owner's Telegram DM, never a group.
+Notices are limited to one per credential per 24 hours and five per agent per
+10 minutes, with deduplication surviving restarts. Client name/version are
+unverified claims; behind nginx the observed peer is normally the proxy, not
+the external user's public IP. A failed notice does not block the MCP request.
 
 ## Install
 
@@ -197,7 +235,9 @@ unauthenticated route.
 Environment overrides: `MINTBOT_MCP_HOST`, `MINTBOT_MCP_PORT`,
 `MINTBOT_MCP_STATE_DIR` (or `AXP_STATE_DIR`), `MINTBOT_MCP_TOKEN_FILE`,
 `MINTBOT_MCP_HERMES_URL`, `MINTBOT_MCP_LOCAL_API_URL`,
-`MINTBOT_MCP_HERMES_API_KEY`, `HERMES_HOME`.
+`MINTBOT_MCP_HERMES_API_KEY`, `MINTBOT_MCP_LOCAL_CREDENTIALS_FILE`, `HERMES_HOME`.
+The machine companion and Hermes calls read the active rotating local identity
+on every request; a missing or malformed identity file fails closed.
 
 ## Development
 
