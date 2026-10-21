@@ -16,11 +16,12 @@ async def test_chat_send_returns_the_reply_and_the_session(rig: Rig):
     assert reply["ok"] is True and reply["status"] == "done"
     assert reply["reply"] == "PONG" and reply["session_id"] == "sess-1" and reply["turn_id"]
     request = rig.hermes.sent("POST", CHAT)[0]
-    assert "x-hermes-session-id" not in request.headers
+    assert request.headers['x-hermes-session-id'] == 'sess-1'
     body = rig.hermes.last_json("POST", CHAT)
     assert body["stream"] is True and body["messages"][-1] == {"role": "user", "content": "ping"}
     assert "MCP client" in body["messages"][0]["content"]
 
+    rig.hermes.on('GET', '/api/sessions/sess-1/messages', {'messages': []})
     await rig.call("chat_send", message="again", session_id="sess-1")
     assert rig.hermes.sent("POST", CHAT)[-1].headers["x-hermes-session-id"] == "sess-1"
 

@@ -14,9 +14,10 @@ import asyncio
 import time
 import uuid
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Callable
 
 from .backends import HermesClient
+from .access import current_principal
 
 TTL_SECONDS = 15 * 60
 MAX_TURNS = 32
@@ -27,6 +28,8 @@ MAX_WAIT_SECONDS = 600
 class Turn:
     id: str
     session_id: str | None
+    credential_id: str = 'owner'
+    project: dict[str, Any] = field(default_factory=dict)
     chunks: list[str] = field(default_factory=list)
     status: str = "running"  # running | done | error | cancelled
     error: str | None = None
@@ -34,6 +37,7 @@ class Turn:
     finished_at: float | None = None
     task: asyncio.Task | None = None
     changed: asyncio.Event = field(default_factory=asyncio.Event)
+    persist: Callable[[str, dict], None] | None = None
 
     @property
     def reply(self) -> str:
@@ -48,6 +52,8 @@ class Turn:
         self.error = error
         self.finished_at = time.monotonic()
         self.changed.set()
+        if self.persist:
+            self.persist(self.id, self.snapshot())
 
     def snapshot(self) -> dict[str, Any]:
         end = self.finished_at if self.finished_at is not None else time.monotonic()
@@ -58,6 +64,7 @@ class Turn:
             "status": self.status,
             "reply": self.reply,
             "elapsed_seconds": round(end - self.started_at, 1),
+            **self.project,
         }
         if self.error:
             out["error"] = self.error
@@ -72,11 +79,17 @@ class TurnRegistry:
         self._turns: dict[str, Turn] = {}
 
     def get(self, turn_id: str) -> Turn | None:
+        self._evict()
         return self._turns.get(turn_id)
 
-    async def start(self, message: str, *, session_id: str | None = None) -> Turn:
+    async def start(self, message: str, *, session_id: str | None = None,
+                    project: dict | None = None, turn_id: str | None = None,
+                    persist: Callable[[str, dict], None] | None = None) -> Turn:
         self._evict()
-        turn = Turn(id=uuid.uuid4().hex[:12], session_id=session_id)
+        turn = Turn(id=turn_id or uuid.uuid4().hex[:12], session_id=session_id,
+                    credential_id=current_principal().credential_id, project=project or {}, persist=persist)
+        if persist:
+            persist(turn.id, turn.snapshot())
         turn.task = asyncio.create_task(self._pump(turn, message))
         self._turns[turn.id] = turn
         return turn
@@ -85,6 +98,8 @@ class TurnRegistry:
         try:
             async for kind, value in self._hermes.stream_turn(message, session_id=turn.session_id):
                 if kind == "session":
+                    if turn.project and value != turn.session_id:
+                        raise ValueError('Hermes returned a different canonical session identity')
                     turn.session_id = value
                 else:
                     turn.chunks.append(value)

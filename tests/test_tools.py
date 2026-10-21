@@ -12,7 +12,7 @@ async def test_every_tool_declares_structured_output(rig: Rig):
     tools = await rig.server.list_tools()
     names = {t.name for t in tools}
     expected = {
-        "chat_send", "chat_wait", "chat_cancel", "chat_sessions", "chat_session_messages",
+        "chat_send", "chat_wait", "chat_cancel", "chat_sessions", "projects_list", "project_get", "chat_session_messages",
         "chat_session_delete", "chat_session_rename", "settings_overview", "model_get", "models_catalog",
         "model_set", "persona_get", "persona_set", "agent_name_get", "agent_name_set", "usage_get",
         "jobs_list", "jobs_create", "jobs_edit", "jobs_pause", "jobs_resume", "jobs_remove",

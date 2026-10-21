@@ -85,6 +85,13 @@ def settings(tmp_path: Path) -> Settings:
 @pytest.fixture
 async def rig(settings: Settings):
     hermes, local, central = FakeBackend(), FakeBackend(), FakeBackend()
+    def context(request):
+        body = json.loads(request.content)
+        return httpx.Response(200, json={'session_id': body.get('session_id') or 'sess-1',
+            'project_id': body.get('project_id') or 'main', 'project_name': '', 'workdir': '/root'})
+    local.handle('POST', '/mcp/chat/context', context)
+    local.on('GET', '/mcp/projects', {'enabled': True, 'runtime_ready': True,
+        'projects': [{'id': 'main', 'name': '', 'dir': '/root', 'is_main': True}]})
     backends = make_backends(settings, hermes_transport=hermes.transport(), local_transport=local.transport(),
                              central_transport=central.transport())
     server = build_server(settings, backends)
