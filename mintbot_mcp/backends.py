@@ -9,7 +9,8 @@
   :meth:`LocalApiClient.unlock` mints from a current code.
 * :class:`CentralClient` - the few values that live in the central mintbot
   database (display name, credit, model catalog), reached exactly the way the
-  agent's own tools reach them.
+  agent's own tools reach them: through panel-local's signing boundary, which
+  signs each request with the agent's own key.
 
 Every method returns the backend's JSON; failures raise :class:`BackendError`
 so the tool layer can turn them into a structured reply.
@@ -246,43 +247,49 @@ class LocalApiClient:
         return {"ok": True, "unlocked": False}
 
 
+# The agent's own signing boundary on panel-local (local_api/central_proxy.py in
+# the mintbot repository): it signs each request with the agent's key and
+# forwards it to central's /v1/agent/<id>/... routes. It serves loopback
+# callers only and takes no credential from them.
+CENTRAL_BOUNDARY = "/plugin/central"
+
+
 class CentralClient:
-    """Values that live in the central mintbot database: display name, credit, model catalog."""
+    """Values that live in the central mintbot database: display name, credit, model catalog.
+
+    Central answers only requests the agent signs, so this client holds no
+    central credential at all: panel-local signs for it, as it does for the
+    agent's own tools.
+    """
 
     def __init__(self, settings: Settings, *, transport: httpx.AsyncBaseTransport | None = None) -> None:
-        self._settings = settings
         self._client = httpx.AsyncClient(
-            base_url=settings.central_url or "http://central.unavailable.invalid",
+            base_url=settings.local_api_url,
             timeout=httpx.Timeout(15.0),
+            follow_redirects=False,
             transport=transport,
         )
 
     async def aclose(self) -> None:
         await self._client.aclose()
 
-    def _panel(self, path: str) -> str:
-        if not self._settings.central_available:
-            raise BackendError(
-                "the central mintbot API is not configured on this agent "
-                "(mintbot.api_base_url / panel_token missing from config.yaml)",
-                code="central_unavailable",
-            )
-        return f"/v1/agent-panel/{self._settings.panel_token}{path}"
+    async def _call(self, method: str, path: str, *, body: Any = None) -> Any:
+        resp = await self._client.request(method, CENTRAL_BOUNDARY + path, json=body)
+        if resp.status_code in (502, 503):
+            # The boundary cannot sign yet (no identity, no central configured)
+            # or central is down: either way the value is out of reach for now.
+            raise BackendError(f"central is unavailable from this agent ({resp.status_code}): {_detail(resp)}",
+                               status=resp.status_code, code="central_unavailable")
+        return _json(resp)
 
     async def get_name(self) -> Any:
-        return _json(await self._client.get(self._panel("/name")))
+        return await self._call("GET", "/name")
 
     async def set_name(self, name: str) -> Any:
-        return _json(await self._client.post(self._panel("/name"), json={"name": name}))
+        return await self._call("POST", "/name", body={"name": name})
 
     async def models(self) -> Any:
-        return _json(await self._client.get(self._panel("/models")))
+        return await self._call("GET", "/models")
 
     async def usage(self) -> Any:
-        if not self._settings.central_url or self._settings.agent_id is None:
-            raise BackendError("the central mintbot API or the agent id is not configured on this agent",
-                               code="central_unavailable")
-        return _json(await self._client.get(
-            f"/internal/agent-usage/{self._settings.agent_id}",
-            headers={"Authorization": f"Bearer {self._settings.hermes_api_key}"},
-        ))
+        return await self._call("GET", "/machine/usage")

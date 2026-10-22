@@ -2,9 +2,9 @@
 
 Everything comes from files that already exist on a mintbot agent VPS:
 ``$HERMES_HOME/env`` (the Hermes API key and port), ``$HERMES_HOME/config.yaml``
-(the ``mintbot:`` block with the central API base and the panel token) and the
-extension's own state dir (the bearer token MCP clients present). Nothing is
-configured twice, and nothing here talks to the network.
+(the agent id in its ``mintbot:`` block) and the extension's own state dir (the
+bearer token MCP clients present). Nothing is configured twice, and nothing
+here talks to the network.
 """
 from __future__ import annotations
 
@@ -83,8 +83,6 @@ class Settings:
     hermes_url: str
     hermes_api_key: str
     local_api_url: str
-    central_url: str | None
-    panel_token: str | None
     agent_id: int | None
     token_file: Path
     host: str = DEFAULT_HOST
@@ -106,10 +104,6 @@ class Settings:
         except (OSError, ValueError, KeyError, TypeError) as exc:
             raise ConfigError("active local identity is unavailable") from exc
 
-    @property
-    def central_available(self) -> bool:
-        return bool(self.central_url and self.panel_token)
-
     def with_listener(self, host: str | None, port: int | None) -> "Settings":
         return dataclasses.replace(self, host=host or self.host, port=port or self.port)
 
@@ -127,7 +121,6 @@ def load_settings(*, home: Path | None = None) -> Settings:
         raise ConfigError(f"no API_SERVER_KEY in {home / 'env'}; is this a mintbot agent VPS?")
     hermes_port = env.get("API_SERVER_PORT") or str(HERMES_API_PORT)
     mintbot = _mintbot_block(home / "config.yaml")
-    central_url = str(mintbot.get("api_base_url") or env.get("MINTBOT_API_BASE") or "").rstrip("/")
     agent_raw = mintbot.get("agent_id") or env.get("AGENT_ID")
     try:
         agent_id = int(agent_raw) if agent_raw not in (None, "") else None
@@ -137,8 +130,6 @@ def load_settings(*, home: Path | None = None) -> Settings:
         hermes_url=os.environ.get("MINTBOT_MCP_HERMES_URL") or f"http://127.0.0.1:{hermes_port}",
         hermes_api_key=api_key,
         local_api_url=os.environ.get("MINTBOT_MCP_LOCAL_API_URL") or f"http://127.0.0.1:{LOCAL_API_PORT}",
-        central_url=central_url or None,
-        panel_token=str(mintbot.get("panel_token") or "") or None,
         agent_id=agent_id,
         token_file=token_file(),
         host=os.environ.get("MINTBOT_MCP_HOST") or DEFAULT_HOST,

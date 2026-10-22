@@ -59,7 +59,7 @@ async def test_check_reports_each_backend(tmp_path: Path, monkeypatch, capsys):
     results = await cli.probe(cli.load_settings())
     assert set(results) == {"hermes", "local_api", "central"}
     assert results["hermes"].startswith("error:") and results["local_api"].startswith("error:")
-    assert "not configured" in results["central"]
+    assert results["central"].startswith("error:"), "central is reached through panel-local, down as well"
 
 
 def test_check_exit_code_follows_the_loopback_backends(monkeypatch, tmp_path: Path, capsys):

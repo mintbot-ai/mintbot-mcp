@@ -70,7 +70,7 @@ class Rig:
 def make_settings(tmp_path: Path, **overrides: Any) -> Settings:
     values: dict[str, Any] = dict(
         hermes_url="http://hermes.test", hermes_api_key="hermes-key", local_api_url="http://local.test",
-        central_url="https://central.test", panel_token="panel-token", agent_id=1091,
+        agent_id=1091,
         token_file=tmp_path / "state" / "token",
     )
     values.update(overrides)

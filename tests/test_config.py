@@ -33,17 +33,16 @@ def test_load_settings_from_a_mintbot_agent_home(tmp_path: Path, monkeypatch):
     s = config.load_settings(home=home)
     assert s.hermes_url == "http://127.0.0.1:9999" and s.hermes_api_key == "secret-key"
     assert s.local_api_url == "http://127.0.0.1:8643"
-    assert s.central_url == "https://api.mintbot.ai" and s.panel_token == "tok" and s.agent_id == 1091
-    assert s.central_available is True
+    assert s.agent_id == 1091
+    assert not hasattr(s, "panel_token"), "central is reached through panel-local; the panel token is never read"
     assert (s.host, s.port) == ("127.0.0.1", 8650)
 
 
-def test_load_settings_without_central_or_config(tmp_path: Path, monkeypatch):
+def test_load_settings_without_config(tmp_path: Path, monkeypatch):
     monkeypatch.delenv("MINTBOT_MCP_HERMES_API_KEY", raising=False)
     home = write_home(tmp_path / "hermes", env="API_SERVER_KEY=k\nAGENT_ID=notanumber\n")
     s = config.load_settings(home=home)
-    assert s.central_url is None and s.panel_token is None and s.agent_id is None
-    assert s.central_available is False
+    assert s.agent_id is None
 
 
 def test_load_settings_refuses_a_non_agent_home(tmp_path: Path, monkeypatch):
@@ -55,7 +54,7 @@ def test_load_settings_refuses_a_non_agent_home(tmp_path: Path, monkeypatch):
 def test_broken_config_yaml_is_not_fatal(tmp_path: Path, monkeypatch):
     monkeypatch.delenv("MINTBOT_MCP_HERMES_API_KEY", raising=False)
     home = write_home(tmp_path / "hermes", cfg="mintbot: [unclosed\n")
-    assert config.load_settings(home=home).central_url is None
+    assert config.load_settings(home=home).agent_id is None
 
 
 def test_environment_overrides_win(tmp_path: Path, monkeypatch):

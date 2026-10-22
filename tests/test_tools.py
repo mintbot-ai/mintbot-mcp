@@ -4,8 +4,7 @@ from __future__ import annotations
 import httpx
 import pytest
 
-from tests.conftest import Rig, make_settings
-from mintbot_mcp.server import build_server, make_backends
+from tests.conftest import Rig
 
 
 async def test_every_tool_declares_structured_output(rig: Rig):
@@ -53,16 +52,27 @@ async def test_unreachable_backend_is_reported_not_raised(rig: Rig):
     assert "connection refused" in reply["error"]
 
 
-async def test_central_tools_without_central_config(tmp_path):
-    settings = make_settings(tmp_path, central_url=None, panel_token=None, agent_id=None)
-    backends = make_backends(settings)
-    rig = Rig(build_server(settings, backends), backends, None, None, None, settings)  # type: ignore[arg-type]
-    try:
-        for tool in ("agent_name_get", "models_catalog", "usage_get"):
-            reply = await rig.call(tool)
-            assert reply["ok"] is False and reply["code"] == "central_unavailable", tool
-    finally:
-        await backends.aclose()
+@pytest.mark.parametrize("status, detail", [(503, "Signing identity unavailable"), (502, "Central unavailable")])
+async def test_central_tools_report_an_unreachable_central(rig: Rig, status, detail):
+    for path in ("/name", "/models", "/machine/usage"):
+        rig.central.on("GET", "/plugin/central" + path, {"detail": detail}, status=status)
+    for tool in ("agent_name_get", "models_catalog", "usage_get"):
+        reply = await rig.call(tool)
+        assert reply["ok"] is False and reply["code"] == "central_unavailable" and reply["status"] == status, tool
+
+
+async def test_central_reads_go_through_the_signing_boundary_without_a_credential(rig: Rig):
+    """Central answers only requests the agent signs, and panel-local signs
+    them: the daemon sends no key, cookie or panel token of its own."""
+    rig.central.on("GET", "/plugin/central/models", {"models": []})
+    rig.central.on("POST", "/plugin/central/name", {"name": "Murr"})
+    assert (await rig.call("models_catalog"))["ok"] is True
+    assert (await rig.call("agent_name_set", name=" Murr "))["ok"] is True
+    assert rig.central.last_json("POST", "/plugin/central/name") == {"name": "Murr"}
+    for request in rig.central.calls:
+        assert request.url.host == "local.test"
+        assert not any(name in request.headers
+                       for name in ("authorization", "x-mintbot-central-auth", "cookie", "origin")), request.headers
 
 
 @pytest.mark.parametrize("tool, arguments", [
@@ -119,7 +129,7 @@ def json_body(rig: Rig, method: str, path: str):
 async def test_settings_overview_collects_every_section_and_keeps_errors_in_place(rig: Rig):
     rig.hermes.on("GET", "/health", {"status": "ok"})
     rig.local.on("GET", "/config/state", {"active": {"provider": "mintbot", "model": "claude-opus-5"}})
-    rig.central.on("GET", "/v1/agent-panel/panel-token/name", {"detail": "central down"}, status=503)
+    rig.central.on("GET", "/plugin/central/name", {"detail": "central down"}, status=503)
     rig.local.on("GET", "/persona/local", {"content": "I am terse.", "max_chars": 4000})
     for path in ("/telegram-bot", "/updates/preferences", "/extensions/settings", "/security/state",
                  "/background-jobs/jobs"):
@@ -159,16 +169,15 @@ async def test_jobs_create_sends_only_given_fields(rig: Rig):
 
 
 async def test_agent_name_get_normalises_the_central_reply(rig: Rig):
-    rig.central.on("GET", "/v1/agent-panel/panel-token/name", {"name": "  Murr "})
+    rig.central.on("GET", "/plugin/central/name", {"name": "  Murr "})
     assert await rig.call("agent_name_get") == {"ok": True, "name": "Murr", "has_name": True}
-    rig.central.on("GET", "/v1/agent-panel/panel-token/name", {"name": None})
+    rig.central.on("GET", "/plugin/central/name", {"name": None})
     assert await rig.call("agent_name_get") == {"ok": True, "name": None, "has_name": False}
 
 
-async def test_usage_get_authenticates_with_the_agent_key(rig: Rig):
-    rig.central.on("GET", "/internal/agent-usage/1091", {"balance_usd": 12.5})
+async def test_usage_get_reads_the_agents_own_usage(rig: Rig):
+    rig.central.on("GET", "/plugin/central/machine/usage", {"balance_usd": 12.5})
     assert await rig.call("usage_get") == {"ok": True, "balance_usd": 12.5}
-    assert rig.central.calls[-1].headers["authorization"] == "Bearer hermes-key"
 
 
 async def test_chat_session_messages_keeps_only_the_visible_turns(rig: Rig):

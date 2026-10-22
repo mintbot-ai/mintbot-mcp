@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased
+
+- The display name, the credit balance and the model catalog are read through
+  the agent's own signing boundary on panel-local (`/plugin/central/...` on
+  loopback), which signs each request with the agent's identity key - the way
+  the agent's own tools reach central. `agent_name_get`, `agent_name_set`,
+  `models_catalog` and `usage_get` work again where central answers only
+  signed requests (HTTP 404 before). The daemon no longer reads the panel
+  token or the central API base, and sends central no credential of its own.
+- `scripts/release-dev.sh` publishes a dev build of main: the next patch plus
+  a UTC timestamp (`0.1.4-dev.20261022170105`), signed on the `dev` channel
+  as a GitHub pre-release; only the newest two dev builds are kept. Agents
+  that installed a stable release never receive one. `scripts/release.sh`
+  takes the tree to sign (`RELEASE_TREE`) and the channel (`AXP_CHANNEL`).
+
 ## v0.1.3 (2026-10-16)
 
 - Stage the package and a separate dependency runtime at a permanent release
