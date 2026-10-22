@@ -264,7 +264,22 @@ gh release create v0.1.0 dist/mintbot-mcp-0.1.0.tar.gz agent-extension.json --no
 `scripts/build-artifact.sh` builds a deterministic tarball of the runtime
 files; `scripts/release.sh` stamps the version into the package, fills the
 digests and dates, signs the manifest and refuses a key that is not listed in
-`agent-extension-keys.json`.
+`agent-extension-keys.json`. A stable release is never a GitHub pre-release:
+it becomes the repository's "latest", which a bare repository URL installs.
+
+Dev builds (maintainers, after a push to `main`):
+
+```bash
+AXP_SIGNING_KEY=/path/to/mintbot.ai-mintbot-mcp.key scripts/release-dev.sh
+```
+
+publishes the newest `main` as `<next patch>-dev.<UTC timestamp>` on the `dev`
+channel, a GitHub pre-release, and keeps only the newest two dev builds. An
+agent follows the channel of the release it installed: install a dev build's
+`agent-extension.json` and it updates to every later dev build and stable
+release; install a stable release and it never sees a dev build. Dev versions
+sort below the stable release they lead to, so the stable release cut when
+`main` is promoted supersedes them with no version juggling.
 
 ## License
 

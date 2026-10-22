@@ -17,16 +17,23 @@
 # Afterwards: review the diff, commit, tag v<version>, and attach BOTH
 # dist/mintbot-mcp-<version>.tar.gz and agent-extension.json to the GitHub
 # release (SPEC section 7.1: hosts on the `github` update source read the
-# manifest from the release asset named agent-extension.json).
+# manifest from the release asset named agent-extension.json). A stable
+# release is never a GitHub pre-release: it becomes the repository's "latest",
+# which is what a bare repository URL installs.
+#
+# scripts/release-dev.sh runs this script on a scratch export of one commit
+# (RELEASE_TREE) and on the dev channel (AXP_CHANNEL). By default the release
+# is cut in this checkout, on the channel the manifest names.
 set -euo pipefail
 
 VERSION="${1:?usage: release.sh <version>}"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+TREE="${RELEASE_TREE:-${ROOT}}"
 KEY="${AXP_SIGNING_KEY:?set AXP_SIGNING_KEY to the publisher private key (never commit it)}"
 command -v axp >/dev/null 2>&1 || { echo "release: the axp CLI is required (pip install -e ../agent-extension)" >&2; exit 1; }
 
 # One version everywhere: the manifest (below), the package and pyproject.
-python3 - "${ROOT}" "${VERSION}" <<'PY'
+python3 - "${TREE}" "${VERSION}" <<'PY'
 import pathlib
 import re
 import sys
@@ -46,7 +53,7 @@ PY
 
 # The release notes live on the GitHub release of this very version; `axp
 # release` refreshes the artifact URLs but not this one.
-python3 - "${ROOT}/agent-extension.json" "${VERSION}" <<'PY'
+python3 - "${TREE}/agent-extension.json" "${VERSION}" <<'PY'
 import json
 import pathlib
 import sys
@@ -57,14 +64,17 @@ data.setdefault("release", {})["changelog"] = f"https://github.com/mintbot-ai/mi
 path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 PY
 
-ARTIFACT="$("${ROOT}/scripts/build-artifact.sh" "${VERSION}" | cut -d" " -f3)"
-axp release "${ROOT}/agent-extension.json" \
+CHANNEL="${AXP_CHANNEL:-$(python3 -c 'import json, sys; print(json.load(open(sys.argv[1]))["release"]["channel"])' "${TREE}/agent-extension.json")}"
+ARTIFACT="$("${TREE}/scripts/build-artifact.sh" "${VERSION}" | cut -d" " -f3)"
+axp release "${TREE}/agent-extension.json" \
   --version "${VERSION}" \
   --artifact "${ARTIFACT}" \
-  --channel "$(python3 -c "import json; print(json.load(open('${ROOT}/agent-extension.json'))['release']['channel'])")" \
+  --channel "${CHANNEL}" \
   --valid-days "${AXP_VALID_DAYS:-180}" \
   --key "${KEY}"
-axp verify "${ROOT}/agent-extension.json" --keydir "${ROOT}/agent-extension-keys.json"
-echo
-echo "next: git commit -am 'release v${VERSION}' && git tag v${VERSION} && git push --tags"
-echo "      gh release create v${VERSION} ${ARTIFACT} ${ROOT}/agent-extension.json --notes-file CHANGELOG.md"
+axp verify "${TREE}/agent-extension.json" --keydir "${TREE}/agent-extension-keys.json"
+if [ "${TREE}" = "${ROOT}" ]; then
+  echo
+  echo "next: git commit -am 'release v${VERSION}' && git tag v${VERSION} && git push --tags"
+  echo "      gh release create v${VERSION} ${ARTIFACT} ${ROOT}/agent-extension.json --notes-file CHANGELOG.md"
+fi
