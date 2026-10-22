@@ -14,6 +14,11 @@
   as a GitHub pre-release; only the newest two dev builds are kept. Agents
   that installed a stable release never receive one. `scripts/release.sh`
   takes the tree to sign (`RELEASE_TREE`) and the channel (`AXP_CHANNEL`).
+- Dev builds are published by `.github/workflows/dev-build.yml` on every push
+  to main and signed by a dev key (`mintbot.ai-mintbot-mcp-dev-2026`) that only
+  mintbot.dev's key directory lists (`agent-extension-keys.dev.json`), so LIVE
+  agents refuse them and the stable key stays off GitHub. `scripts/release.sh`
+  signs with any key of a key directory (`AXP_SIGNING_KEY_ID`, `AXP_KEYDIR`).
 
 ## v0.1.3 (2026-10-16)
 

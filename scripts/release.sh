@@ -22,8 +22,10 @@
 # which is what a bare repository URL installs.
 #
 # scripts/release-dev.sh runs this script on a scratch export of one commit
-# (RELEASE_TREE) and on the dev channel (AXP_CHANNEL). By default the release
-# is cut in this checkout, on the channel the manifest names.
+# (RELEASE_TREE), on the dev channel (AXP_CHANNEL), with the dev key
+# (AXP_SIGNING_KEY_ID) checked against the DEV key directory (AXP_KEYDIR). By
+# default the release is cut in this checkout, on the channel and with the
+# signing key the manifest names, checked against agent-extension-keys.json.
 set -euo pipefail
 
 VERSION="${1:?usage: release.sh <version>}"
@@ -31,6 +33,27 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TREE="${RELEASE_TREE:-${ROOT}}"
 KEY="${AXP_SIGNING_KEY:?set AXP_SIGNING_KEY to the publisher private key (never commit it)}"
 command -v axp >/dev/null 2>&1 || { echo "release: the axp CLI is required (pip install -e ../agent-extension)" >&2; exit 1; }
+KEYDIR="${AXP_KEYDIR:-${TREE}/agent-extension-keys.json}"
+
+# Signing with a key other than the manifest's own (scripts/release-dev.sh
+# signs with the dev key): its key directory entry becomes the signing block.
+# `axp release` refuses when the private key does not match that entry.
+if [ -n "${AXP_SIGNING_KEY_ID:-}" ]; then
+  python3 - "${TREE}/agent-extension.json" "${KEYDIR}" "${AXP_SIGNING_KEY_ID}" <<'PY'
+import json
+import pathlib
+import sys
+
+path, keydir, key_id = pathlib.Path(sys.argv[1]), pathlib.Path(sys.argv[2]), sys.argv[3]
+keys = json.loads(keydir.read_text(encoding="utf-8"))["keys"]
+entry = next((key for key in keys if key.get("key_id") == key_id), None)
+if entry is None:
+    sys.exit(f"release: {key_id} is not listed in {keydir}")
+data = json.loads(path.read_text(encoding="utf-8"))
+data["signing"] = {"public_key": entry["public_key"], "key_id": key_id, "next_key": None}
+path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+PY
+fi
 
 # One version everywhere: the manifest (below), the package and pyproject.
 python3 - "${TREE}" "${VERSION}" <<'PY'
@@ -72,7 +95,7 @@ axp release "${TREE}/agent-extension.json" \
   --channel "${CHANNEL}" \
   --valid-days "${AXP_VALID_DAYS:-180}" \
   --key "${KEY}"
-axp verify "${TREE}/agent-extension.json" --keydir "${TREE}/agent-extension-keys.json"
+axp verify "${TREE}/agent-extension.json" --keydir "${KEYDIR}"
 if [ "${TREE}" = "${ROOT}" ]; then
   echo
   echo "next: git commit -am 'release v${VERSION}' && git tag v${VERSION} && git push --tags"

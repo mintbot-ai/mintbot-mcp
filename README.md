@@ -267,19 +267,23 @@ digests and dates, signs the manifest and refuses a key that is not listed in
 `agent-extension-keys.json`. A stable release is never a GitHub pre-release:
 it becomes the repository's "latest", which a bare repository URL installs.
 
-Dev builds (maintainers, after a push to `main`):
+Dev builds publish themselves: `.github/workflows/dev-build.yml` runs
+`scripts/release-dev.sh` on every push to `main` (and right after each stable
+release). It publishes the commit as `<next patch>-dev.<UTC timestamp>` on the
+`dev` channel, a GitHub pre-release, and keeps only the newest two dev builds.
+
+Dev builds are signed by a separate dev key (repository secret
+`AXP_DEV_SIGNING_KEY`). Only `agent-extension-keys.dev.json`, the key directory
+mintbot.dev serves to DEV agents, lists it; mintbot.ai never does, so a LIVE
+agent refuses every dev build. An agent pins the key of its first install:
+install a dev build's `agent-extension.json` and it updates to every later dev
+build; install a stable release and it never takes a dev build. Moving an
+agent between the two lines is a reinstall with an explicit re-trust. By hand,
+with the dev key:
 
 ```bash
-AXP_SIGNING_KEY=/path/to/mintbot.ai-mintbot-mcp.key scripts/release-dev.sh
+AXP_SIGNING_KEY=/path/to/mintbot.ai-mintbot-mcp-dev.key scripts/release-dev.sh [<commit>]
 ```
-
-publishes the newest `main` as `<next patch>-dev.<UTC timestamp>` on the `dev`
-channel, a GitHub pre-release, and keeps only the newest two dev builds. An
-agent follows the channel of the release it installed: install a dev build's
-`agent-extension.json` and it updates to every later dev build and stable
-release; install a stable release and it never sees a dev build. Dev versions
-sort below the stable release they lead to, so the stable release cut when
-`main` is promoted supersedes them with no version juggling.
 
 ## License
 
