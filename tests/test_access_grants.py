@@ -35,8 +35,8 @@ def test_chat_group_uses_real_registered_session_tool(tmp_path):
     assert 'chat_sessions_list' not in grant['tools']
 
 
-@pytest.mark.parametrize('tool', ['security_unlock', 'security_lock', 'persona_set', 'telegram_bot_apply', 'extensions_install'])
-def test_owner_cookie_sensitive_tools_cannot_be_delegated(tmp_path, tool):
+@pytest.mark.parametrize('tool', ['security_state', 'persona_set', 'telegram_bot_apply', 'extensions_install'])
+def test_owner_control_tools_cannot_be_delegated(tmp_path, tool):
     from mintbot_mcp.access import GrantStore, Principal
     store = GrantStore(tmp_path / 'private' / 'grants.json')
     with pytest.raises(ValueError):

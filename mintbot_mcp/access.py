@@ -19,9 +19,11 @@ class AccessDenied(PermissionError):
     """The credential cannot access this operation or project."""
 
 
-# These routes share an owner-unlocked panel cookie. Never delegate them.
+# These routes change the owner's own controls of the agent (the panel's
+# two-factor state, the persona, the Telegram bot, what gets installed), and
+# the server reaches them as the agent's machine identity. Never delegate them.
 OWNER_ONLY = frozenset({
-    'security_unlock', 'security_lock', 'security_state', 'persona_set',
+    'security_state', 'persona_set',
     'telegram_bot_apply', 'telegram_bot_remove', 'extensions_install',
 })
 PROJECT_TOOLS = frozenset({

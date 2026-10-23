@@ -19,6 +19,14 @@
   mintbot.dev's key directory lists (`agent-extension-keys.dev.json`), so LIVE
   agents refuse them and the stable key stays off GitHub. `scripts/release.sh`
   signs with any key of a key directory (`AXP_SIGNING_KEY_ID`, `AXP_KEYDIR`).
+- Every settings tool calls panel-local as the agent's machine identity (the
+  current local key as a bearer token on loopback), the way the `/mcp/`
+  companion routes already did; panel-local lets that identity through every
+  gate the owner's session clears, two-factor login included. The legacy
+  `X-Mintbot-Central-Auth` header and the panel session cookie are gone, and
+  with them `security_unlock`, `security_lock` and the
+  `second_factor_required` reply. `security_state` reports the panel's
+  two-factor state alone.
 
 ## v0.1.3 (2026-10-16)
 

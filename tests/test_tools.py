@@ -19,7 +19,7 @@ async def test_every_tool_declares_structured_output(rig: Rig):
         "extensions_settings_set", "extensions_install", "extensions_uninstall", "extensions_policy_set",
         "extensions_check_now", "extensions_update_now", "telegram_bot_get", "telegram_bot_apply",
         "telegram_bot_remove", "updates_get", "updates_set", "updates_run", "ssh_keys_list", "ssh_keys_add",
-        "ssh_keys_remove", "security_state", "security_unlock", "security_lock", "server_reboot",
+        "ssh_keys_remove", "security_state", "server_reboot",
     }
     assert expected <= names, sorted(expected - names)
     for tool in tools:
@@ -90,7 +90,6 @@ async def test_central_reads_go_through_the_signing_boundary_without_a_credentia
     ("extensions_install", {"domain_or_url": ""}),
     ("ssh_keys_add", {"key": "ssh-ed25519 AAA\nssh-rsa BBB"}),
     ("ssh_keys_remove", {"fingerprint": ""}),
-    ("security_unlock", {"code": "12"}),
     ("jobs_pause", {"job_id": "a/b"}),
 ])
 async def test_argument_validation_never_reaches_a_backend(rig: Rig, tool, arguments):
@@ -99,27 +98,30 @@ async def test_argument_validation_never_reaches_a_backend(rig: Rig, tool, argum
     assert rig.local.calls == [] and rig.hermes.calls == [] and rig.central.calls == []
 
 
-async def test_second_factor_gate_unlock_and_lock(rig: Rig):
-    rig.local.on("POST", "/persona/local", {"detail": "second_factor_required"}, status=401)
-    reply = await rig.call("persona_set", content="Be brief.")
-    assert reply["ok"] is False and reply["code"] == "second_factor_required"
-    rig.local.on("GET", "/security/state", {"totp_enabled": True})
-    assert (await rig.call("security_state"))["two_factor_unlocked"] is False
-
-    rig.local.on("POST", "/auth/totp_verify", {"ok": True},
-                 headers={"set-cookie": "mb_sess=session-cookie; Path=/; Secure; HttpOnly"})
-    assert await rig.call("security_unlock", code="123 456") == {"ok": True, "unlocked": True}
-    assert json_body(rig, "POST", "/auth/totp_verify") == {"code": "123456"}
-
+async def test_settings_calls_carry_the_machine_identity_alone(rig: Rig):
+    """panel-local reads the machine identity from one shape only: the current
+    local key as a bearer token, no cookie, no central header. With two-factor
+    login on, that identity still passes, so no code is ever asked for."""
     rig.local.on("POST", "/persona/local", {"saved": True})
+    rig.local.on("GET", "/security/state", {"totp_enabled": True})
     assert (await rig.call("persona_set", content="Be brief."))["ok"] is True
-    assert rig.local.sent("POST", "/persona/local")[-1].headers["cookie"] == "mb_sess=session-cookie"
+    sent = rig.local.sent("POST", "/persona/local")[-1].headers
+    assert sent["authorization"] == f"Bearer {rig.settings.local_key()}"
+    assert "cookie" not in sent and "x-mintbot-central-auth" not in sent
     state = await rig.call("security_state")
-    assert state["two_factor_unlocked"] is True and state["totp_enabled"] is True
+    assert state == {"ok": True, "totp_enabled": True}
 
-    rig.local.on("POST", "/auth/logout", {})
-    assert await rig.call("security_lock") == {"ok": True, "unlocked": False}
-    assert rig.local.sent("POST", "/auth/logout")[-1].headers["cookie"] == "mb_sess=session-cookie"
+
+async def test_settings_refuse_without_a_local_identity(rig: Rig, monkeypatch):
+    from mintbot_mcp.config import ConfigError
+
+    def unavailable():
+        raise ConfigError("active local identity is unavailable")
+
+    monkeypatch.setattr(type(rig.settings), "local_key", lambda self: unavailable())
+    reply = await rig.call("persona_get")
+    assert reply["ok"] is False and reply["code"] == "local_identity_unavailable"
+    assert rig.local.calls == []
 
 
 def json_body(rig: Rig, method: str, path: str):
@@ -135,7 +137,7 @@ async def test_settings_overview_collects_every_section_and_keeps_errors_in_plac
                  "/background-jobs/jobs"):
         rig.local.on("GET", path, {"path": path})
     overview = await rig.call("settings_overview")
-    assert overview["ok"] is True and overview["agent_id"] == 1091 and overview["two_factor_unlocked"] is False
+    assert overview["ok"] is True and overview["agent_id"] == 1091 and "two_factor_unlocked" not in overview
     assert overview["model"]["active"]["model"] == "claude-opus-5"
     assert overview["name"]["ok"] is False and overview["name"]["status"] == 503
     assert overview["persona"] == {"chars": 11, "max_chars": 4000, "has_overlay": True}
@@ -206,10 +208,12 @@ async def test_extensions_install_preflights_before_consent(rig: Rig):
     assert rig.local.last_json("POST", "/extensions/install")["consented"] is True
 
 
-async def test_local_api_requests_carry_the_central_auth_header(rig: Rig):
+async def test_local_api_requests_carry_the_machine_identity(rig: Rig):
     rig.local.on("GET", "/background-jobs/jobs", [])
     assert await rig.call("jobs_list") == {"ok": True, "result": []}
-    assert rig.local.calls[-1].headers["x-mintbot-central-auth"] == "hermes-key"
+    headers = rig.local.calls[-1].headers
+    assert headers["authorization"] == f"Bearer {rig.settings.local_key()}"
+    assert "x-mintbot-central-auth" not in headers and "cookie" not in headers
 
 
 async def test_agent_overview_resource_mirrors_the_tool(rig: Rig):

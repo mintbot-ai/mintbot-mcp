@@ -2,11 +2,11 @@
 
 * :class:`HermesClient` - the stock Hermes API server on loopback (chat turns
   and the session store), authenticated with the agent's ``API_SERVER_KEY``.
-* :class:`LocalApiClient` - the panel-local settings daemon on loopback. The
-  same key, presented as ``X-Mintbot-Central-Auth``, clears every route that a
-  trusted server-to-server caller may use; the browser-only routes additionally
-  want a two-factor session cookie when the owner has TOTP on, which
-  :meth:`LocalApiClient.unlock` mints from a current code.
+* :class:`LocalApiClient` - the panel-local settings daemon on loopback,
+  called as the agent's own machine identity: the current local key as
+  ``Authorization: Bearer`` on a direct loopback connection without browser
+  or proxy headers. panel-local lets that identity through every gate the
+  owner's panel session clears, the two-factor gate included.
 * :class:`CentralClient` - the few values that live in the central mintbot
   database (display name, credit, model catalog), reached exactly the way the
   agent's own tools reach them: through panel-local's signing boundary, which
@@ -25,9 +25,7 @@ import httpx
 from .config import ConfigError, Settings
 from .access import current_principal
 
-CENTRAL_AUTH_HEADER = "X-Mintbot-Central-Auth"
 SESSION_ID_HEADER = "X-Hermes-Session-Id"
-SESSION_COOKIE = "mb_sess"
 CHAT_MODEL = "hermes-agent"
 CHANNEL_MARKER = (
     "[Current channel: MCP client (mintbot-mcp) - the user talks to you through an "
@@ -50,15 +48,6 @@ class BackendError(RuntimeError):
         if self.code:
             out["code"] = self.code
         return out
-
-
-class SecondFactorRequired(BackendError):
-    def __init__(self) -> None:
-        super().__init__(
-            "two-factor login is enabled on this agent's panel and this setting is browser-gated; "
-            "call security_unlock with a current authenticator code, then retry",
-            status=401, code="second_factor_required",
-        )
 
 
 def _detail(resp: httpx.Response) -> str:
@@ -84,16 +73,6 @@ def _json(resp: httpx.Response) -> Any:
         return resp.json()
     except ValueError:
         return {"raw": resp.text[:2000]}
-
-
-def _cookie_from(resp: httpx.Response, name: str) -> str | None:
-    """Read a Set-Cookie value by hand: the panel marks it Secure, and we talk plain
-    HTTP on loopback, so a cookie jar would drop it."""
-    for header in resp.headers.get_list("set-cookie"):
-        key, _, value = header.split(";", 1)[0].partition("=")
-        if key.strip() == name:
-            return value.strip() or None
-    return None
 
 
 class HermesClient:
@@ -176,75 +155,52 @@ class HermesClient:
 
 
 class LocalApiClient:
-    """mintbot-panel-local on loopback, as the trusted server-to-server caller."""
+    """mintbot-panel-local on loopback, called as the agent's machine identity.
+
+    Every request carries the agent's current local key (read on each call,
+    so an activated rotation is picked up at once) as ``Authorization:
+    Bearer`` over a direct loopback connection with no browser or proxy
+    headers. panel-local reads exactly that shape as the machine identity
+    (``auth_session.is_local_machine_request``) and lets it through every
+    gate the owner's panel session clears, the two-factor gate included: an
+    MCP client may change and run everything on its agent. No central
+    credential, no panel cookie.
+    """
 
     def __init__(self, settings: Settings, *, transport: httpx.AsyncBaseTransport | None = None) -> None:
         self._settings = settings
         self._transport = transport
-        self._client = httpx.AsyncClient(
-            base_url=settings.local_api_url,
-            headers={CENTRAL_AUTH_HEADER: settings.hermes_api_key},
-            timeout=httpx.Timeout(60.0),
-            transport=transport,
-        )
-        self._session_cookie: str | None = None
 
     async def aclose(self) -> None:
-        await self._client.aclose()
+        return None
 
-    @property
-    def unlocked(self) -> bool:
-        return current_principal().owner and self._session_cookie is not None
+    def _client(self, timeout: float, *, identity: bool = True) -> httpx.AsyncClient:
+        headers: dict[str, str] = {}
+        if identity:
+            try:
+                headers["Authorization"] = f"Bearer {self._settings.local_key()}"
+            except ConfigError:
+                raise BackendError("active local identity is unavailable",
+                                   code="local_identity_unavailable") from None
+        return httpx.AsyncClient(base_url=self._settings.local_api_url, transport=self._transport,
+                                 timeout=timeout, follow_redirects=False, headers=headers)
+
+    async def request(self, method: str, path: str, *, body: Any = None, params: dict | None = None,
+                      timeout: float = 60) -> Any:
+        async with self._client(timeout) as client:
+            return _json(await client.request(method, path, json=body, params=params))
 
     async def project_request(self, method: str, path: str, *, body: Any = None,
                               params: dict | None = None, timeout: float = 30) -> Any:
-        """Use the narrow machine companion, without browser cookies or legacy authority."""
+        """The MCP companion routes (/mcp/...), the same identity as every other route."""
         if not path.startswith("/mcp/"):
             raise BackendError("invalid companion path", code="invalid_argument")
-        try:
-            key = self._settings.local_key()
-        except ConfigError:
-            raise BackendError("active local identity is unavailable", code="local_identity_unavailable") from None
-        async with httpx.AsyncClient(base_url=self._settings.local_api_url, transport=self._transport,
-                                     timeout=timeout, follow_redirects=False,
-                                     headers={"Authorization": f"Bearer {key}"}) as client:
-            return _json(await client.request(method, path, json=body, params=params))
-
-    async def request(self, method: str, path: str, *, body: Any = None, params: dict | None = None,
-                      timeout: float | None = None) -> Any:
-        headers = {"Cookie": f"{SESSION_COOKIE}={self._session_cookie}"} if self.unlocked else {}
-        kwargs: dict[str, Any] = {"params": params, "headers": headers}
-        if body is not None:
-            kwargs["json"] = body
-        if timeout is not None:
-            kwargs["timeout"] = timeout
-        resp = await self._client.request(method, path, **kwargs)
-        if resp.status_code == 401 and "second_factor_required" in resp.text:
-            self._session_cookie = None
-            raise SecondFactorRequired()
-        return _json(resp)
+        return await self.request(method, path, body=body, params=params, timeout=timeout)
 
     async def health(self) -> Any:
-        return _json(await self._client.get("/health"))
-
-    async def unlock(self, code: str) -> dict[str, Any]:
-        resp = await self._client.post("/auth/totp_verify", json={"code": code})
-        if resp.status_code >= 400:
-            raise BackendError(f"authenticator code rejected ({resp.status_code}): {_detail(resp)}",
-                               status=resp.status_code)
-        cookie = _cookie_from(resp, SESSION_COOKIE)
-        if not cookie:
-            raise BackendError("the panel accepted the code but returned no session cookie")
-        self._session_cookie = cookie
-        return {"ok": True, "unlocked": True}
-
-    async def lock(self) -> dict[str, Any]:
-        if self._session_cookie:
-            try:
-                await self.request("POST", "/auth/logout")
-            finally:
-                self._session_cookie = None
-        return {"ok": True, "unlocked": False}
+        """Liveness needs no identity, so an agent without one still reports health."""
+        async with self._client(10, identity=False) as client:
+            return _json(await client.get("/health"))
 
 
 # The agent's own signing boundary on panel-local (local_api/central_proxy.py in

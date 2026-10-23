@@ -57,20 +57,43 @@ async def test_companion_uses_current_rotating_bearer_and_no_owner_cookie(settin
         await client.aclose()
 
 
-async def test_restricted_request_never_borrows_owner_cookie_or_exposes_unlock(settings):
+async def test_settings_requests_observe_rotation_and_carry_nothing_else(settings, tmp_path):
+    """Every settings call is the machine identity of the moment: the current
+    local key, then the pending one once a rotation is activated. No cookie,
+    no central header, whoever the principal is."""
+    path = tmp_path / 'local_credentials.json'
+    path.write_text(json.dumps({'current': {'hermes': 'first'}, 'activated': False}))
+    configured = dataclasses.replace(settings, local_credentials_file=path)
     requests = []
     def handler(request):
         requests.append(request)
         return httpx.Response(200, json={})
-    client = LocalApiClient(settings, transport=httpx.MockTransport(handler))
-    client._session_cookie = 'owner-cookie'
+    client = LocalApiClient(configured, transport=httpx.MockTransport(handler))
     marker = principal_context.set(Principal('grant', 'test', False, frozenset({'model_get'})))
     try:
-        assert not client.unlocked
         await client.request('GET', '/config/state')
-        assert 'cookie' not in requests[0].headers
+        path.write_text(json.dumps({'current': {'hermes': 'first'}, 'pending': {'hermes': 'second'},
+                                    'activated': True}))
+        await client.request('POST', '/persona/local', body={'content': 'x'})
+        await client.health()
+        assert [r.headers.get('authorization') for r in requests] == ['Bearer first', 'Bearer second', None]
+        for request in requests:
+            assert 'cookie' not in request.headers and 'x-mintbot-central-auth' not in request.headers
     finally:
         principal_context.reset(marker)
+        await client.aclose()
+
+
+async def test_settings_request_refuses_without_a_local_identity(settings, tmp_path):
+    configured = dataclasses.replace(settings, local_credentials_file=tmp_path / 'missing.json')
+    def handler(request):
+        raise AssertionError('no request leaves without an identity')
+    client = LocalApiClient(configured, transport=httpx.MockTransport(handler))
+    try:
+        with pytest.raises(BackendError) as info:
+            await client.request('GET', '/config/state')
+        assert info.value.code == 'local_identity_unavailable'
+    finally:
         await client.aclose()
 
 

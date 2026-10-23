@@ -54,18 +54,20 @@ protocol error: the client gets `{"ok": false, "error": ..., "code": ...}`.
 | telegram | `telegram_bot_get`, `telegram_bot_apply`, `telegram_bot_remove` |
 | updates | `updates_get`, `updates_set`, `updates_run` |
 | ssh | `ssh_keys_list`, `ssh_keys_add`, `ssh_keys_remove` |
-| security | `security_state`, `security_unlock`, `security_lock` |
+| security | `security_state` |
 | server | `server_reboot` (requires `confirm=true`) |
 
 Deliberately **not** exposed: entering BYOK API keys, setting up two-factor
 login, the root password. Those stay in the panel, where the browser-only
 two-factor gate protects them.
 
-**Two-factor login.** When the owner has TOTP on, the browser-gated settings
-(persona, Telegram bot, extension installs) answer `code:
-"second_factor_required"`. `security_unlock` with a current authenticator
-code mints a panel session that the daemon keeps in memory until
-`security_lock` or a restart.
+**Machine identity.** The daemon calls panel-local as the agent's own
+machine identity: the agent's current local key as a bearer token on a direct
+loopback connection with no browser or proxy headers. panel-local lets that
+identity through every gate the owner's panel session clears, two-factor login
+included, so an MCP client may change and run everything on its agent and is
+never asked for an authenticator code. The daemon holds no central credential
+and no panel cookie.
 
 ## Project-aware chat and safe retries
 
