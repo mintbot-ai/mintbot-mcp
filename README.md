@@ -289,6 +289,8 @@ Dev builds publish themselves: `.github/workflows/dev-build.yml` runs
 `scripts/release-dev.sh` on every push to `main` (and right after each stable
 release). It publishes the commit as `<next patch>-dev.<UTC timestamp>` on the
 `dev` channel, a GitHub pre-release, and keeps only the newest two dev builds.
+Its last step reports the build to DEV (repository secret
+`BEAVER_DEV_BUILD_TOKEN`), whose Beaver runs the AXP package tests on it.
 
 Dev builds are signed by a separate dev key (repository secret
 `AXP_DEV_SIGNING_KEY`). Only `agent-extension-keys.dev.json`, the key directory

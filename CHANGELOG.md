@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- `.github/workflows/dev-build.yml` reports every published dev build to DEV
+  CatOffice (`POST /beaver/dev-build`, repository secret
+  `BEAVER_DEV_BUILD_TOKEN`), which queues Beaver's AXP package tests on it;
+  `scripts/release-dev.sh` tells the workflow the version and commit it
+  published (`GITHUB_OUTPUT`).
 - `scripts/release.sh` gates a release on the package's own channel: it names
   the dev build it promotes (`AXP_PROMOTE_FROM`), refuses a dirty checkout,
   and the mintbot repository's promote check must confirm a green DEV Beaver
