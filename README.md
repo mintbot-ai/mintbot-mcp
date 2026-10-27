@@ -265,10 +265,16 @@ the manifest against the AXP schema, the reference implementation and the
 publisher key directory. No test touches the live agent, the network or the
 signing key.
 
-Release (maintainers):
+Release (maintainers). A release promotes a dev build that DEV's Beaver
+"AXP package tests" passed on; `scripts/release.sh` names it and runs the
+mintbot repository's promote gate (`developer_tools/axp_promote_check.py`,
+located through `MINTBOT_REPO`, default `../mintbot`) before it stamps or
+signs anything. The whole flow: `developer_tools/agent_skills/axp_package_release.md`
+there.
 
 ```bash
-AXP_SIGNING_KEY=/path/to/mintbot.ai-mintbot-mcp.key scripts/release.sh 0.1.0
+AXP_PROMOTE_FROM=0.1.5-dev.20261027120000 \\
+  AXP_SIGNING_KEY=/path/to/mintbot.ai-mintbot-mcp.key scripts/release.sh 0.1.5
 git commit -am 'release v0.1.0' && git tag v0.1.0 && git push --tags
 gh release create v0.1.0 dist/mintbot-mcp-0.1.0.tar.gz agent-extension.json --notes-file CHANGELOG.md
 ```

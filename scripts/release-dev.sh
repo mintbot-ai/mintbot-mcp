@@ -28,7 +28,8 @@
 #   signed by the stable key must not stand as its newest candidate.
 #
 # The working tree is never touched: the commit is exported to a scratch
-# directory and stamped, built and signed there by scripts/release.sh.
+# directory and stamped, built and signed there by scripts/release.sh. The
+# promote gate in that script applies to releases, never to a dev build.
 set -euo pipefail
 
 REPO="mintbot-ai/mintbot-mcp"

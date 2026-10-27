@@ -3,8 +3,8 @@ the key it is named, `release-dev.sh` end to end, the dev key directory and
 the workflow that publishes every push to main.
 
 The scripts run for real against a throwaway git clone of the runtime tree,
-with fake `axp`, `gh` and `git fetch` on PATH that only log: no test touches
-the signing key, GitHub or a remote.
+with fake `axp`, `gh`, `git fetch` and promote gate on PATH that only log: no
+test touches the signing key, GitHub, Beaver or a remote.
 """
 from __future__ import annotations
 
@@ -23,6 +23,7 @@ STABLE_KEYDIR = REPO / "agent-extension-keys.json"
 DEV_KEYDIR = REPO / "agent-extension-keys.dev.json"
 DEV_KEY_ID = "mintbot.ai-mintbot-mcp-dev-2026"
 WORKFLOW = REPO / ".github" / "workflows" / "dev-build.yml"
+PROMOTE_FROM = "9.9.9-dev.20260101000000"
 GIT_IDENTITY = ["-c", "user.name=test", "-c", "user.email=test@example.invalid", "-c", "commit.gpgsign=false"]
 
 _FAKE_AXP = """#!/bin/bash
@@ -51,6 +52,15 @@ exec __REAL__ "$@"
 """
 
 
+# The mintbot repository's promote gate, as release.sh calls it: logs its
+# arguments and answers what FAKE_GATE_EXIT says.
+_FAKE_GATE = """import os, sys
+with open(os.environ["FAKE_LOG"], "a") as log:
+    log.write("promote-check " + " ".join(sys.argv[1:]) + "\\n")
+sys.exit(int(os.environ.get("FAKE_GATE_EXIT", "0")))
+"""
+
+
 @pytest.fixture
 def publisher(tmp_path: Path) -> dict:
     env = _env(tmp_path)
@@ -62,8 +72,11 @@ def publisher(tmp_path: Path) -> dict:
     releases = tmp_path / "releases"
     releases.write_text("v0.1.4-dev.20261020000000\nv0.1.3\nv0.1.4-dev.20261021000000\nv0.1.2\n", encoding="utf-8")
     (tmp_path / "scratch").mkdir()
+    gate = tmp_path / "promote_check.py"
+    gate.write_text(_FAKE_GATE, encoding="utf-8")
     env.update(AXP_SIGNING_KEY=str(tmp_path / "publisher.key"), FAKE_LATEST="v0.1.3",
-               FAKE_RELEASES=str(releases), TMPDIR=str(tmp_path / "scratch"))
+               FAKE_RELEASES=str(releases), TMPDIR=str(tmp_path / "scratch"),
+               AXP_PROMOTE_CHECK=str(gate), AXP_PROMOTE_FROM=PROMOTE_FROM)
     return env
 
 
@@ -100,8 +113,11 @@ def test_release_dev_parses_and_fails_closed():
 
 
 def test_release_signs_the_tree_it_is_handed_never_the_checkout(publisher, clone):
+    head = _git(clone, "rev-parse", "HEAD").strip()
     result = _run(RELEASE, "9.9.9", env={**publisher, "RELEASE_TREE": str(clone)})
     assert result.returncode == 0, result.stdout + result.stderr
+    assert _log(publisher).startswith(f"promote-check --package mintbot-mcp --version {PROMOTE_FROM} --commit {head}\n"), \
+        "the evidence is checked before anything is built or signed"
     assert '__version__ = "9.9.9"' in (clone / "mintbot_mcp" / "__init__.py").read_text(encoding="utf-8")
     assert '__version__ = "9.9.9"' not in (REPO / "mintbot_mcp" / "__init__.py").read_text(encoding="utf-8")
     assert (clone / "dist" / "mintbot-mcp-9.9.9.tar.gz").is_file()
@@ -133,17 +149,59 @@ def test_release_refuses_a_key_the_directory_does_not_list(publisher, clone):
     assert result.returncode == 1
     assert f"{DEV_KEY_ID} is not listed in {clone}/agent-extension-keys.json" in result.stderr
     assert '__version__ = "9.9.9"' not in (clone / "mintbot_mcp" / "__init__.py").read_text(encoding="utf-8")
-    assert _log(publisher) == "", "nothing is built or signed"
+    assert "axp " not in _log(publisher), "nothing is built or signed"
+
+
+def _init_py(clone: Path) -> str:
+    return (clone / "mintbot_mcp" / "__init__.py").read_text(encoding="utf-8")
+
+
+def test_release_refuses_to_promote_without_naming_the_dev_build(publisher, clone):
+    env = {k: v for k, v in publisher.items() if k != "AXP_PROMOTE_FROM"}
+    result = _run(RELEASE, "9.9.9", env={**env, "RELEASE_TREE": str(clone)})
+    assert result.returncode == 1 and "AXP_PROMOTE_FROM" in result.stderr
+    assert _log(publisher) == "", "nothing is checked, built or signed"
+
+
+def test_release_refuses_a_dev_build_of_another_version(publisher, clone):
+    env = {**publisher, "RELEASE_TREE": str(clone), "AXP_PROMOTE_FROM": "9.9.8-dev.20260101000000"}
+    result = _run(RELEASE, "9.9.9", env=env)
+    assert result.returncode == 1 and "9.9.8-dev.20260101000000 is not a dev build of 9.9.9" in result.stderr
+    assert _log(publisher) == ""
+
+
+def test_release_refuses_a_dirty_checkout(publisher, clone):
+    (clone / "scratch.txt").write_text("not committed\n", encoding="utf-8")
+    result = _run(RELEASE, "9.9.9", env={**publisher, "RELEASE_TREE": str(clone)})
+    assert result.returncode == 1 and "uncommitted changes" in result.stderr
+    assert _log(publisher) == ""
+
+
+def test_release_refuses_when_the_gate_refuses(publisher, clone):
+    result = _run(RELEASE, "9.9.9", env={**publisher, "RELEASE_TREE": str(clone), "FAKE_GATE_EXIT": "1"})
+    assert result.returncode == 1
+    log = _log(publisher)
+    assert log.startswith("promote-check ") and "axp " not in log, "a refused gate builds and signs nothing"
+    assert '__version__ = "9.9.9"' not in _init_py(clone)
+
+
+def test_release_refuses_without_the_gate_script(publisher, clone, tmp_path):
+    env = {**publisher, "RELEASE_TREE": str(clone), "AXP_PROMOTE_CHECK": str(tmp_path / "absent.py")}
+    result = _run(RELEASE, "9.9.9", env=env)
+    assert result.returncode == 1 and "the promote gate" in result.stderr and "is missing" in result.stderr
+    assert _log(publisher) == ""
 
 
 def test_the_dev_key_directory_is_the_stable_one_plus_the_dev_key():
     """The directory mintbot.dev serves to DEV agents (its copy lives in the
-    mintbot repository): every stable key, and the dev key mintbot.ai never lists."""
+    mintbot repository, another in mintbot-desktop): every stable key, then the
+    dev-build keys mintbot.ai never lists."""
     stable, dev = _keys(STABLE_KEYDIR), _keys(DEV_KEYDIR)
     assert json.loads(DEV_KEYDIR.read_text(encoding="utf-8"))["publisher"] == "mintbot.ai"
     assert dev[:len(stable)] == stable
     added = dev[len(stable):]
-    assert [(key["key_id"], key["extensions"]) for key in added] == [(DEV_KEY_ID, ["mintbot-mcp"])]
+    assert [(key["key_id"], key["extensions"]) for key in added] == [
+        (DEV_KEY_ID, ["mintbot-mcp"]), ("mintbot.ai-mintbot-desktop-dev-2026", ["mintbot-desktop"])]
     assert added[0]["public_key"] not in {key["public_key"] for key in stable}
 
 
@@ -171,6 +229,7 @@ def test_release_dev_publishes_a_dev_build_and_keeps_the_newest_two(tmp_path, pu
     assert re.search(r"^axp verify \S+/agent-extension\.json --keydir \S+/agent-extension-keys\.dev\.json$", log, re.M)
     uploaded = json.loads((tmp_path / "releases.manifest.json").read_text(encoding="utf-8"))
     assert uploaded["signing"] == _dev_signing(), "a dev build carries the dev key, never the stable one"
+    assert "promote-check" not in log, "a dev build is what the gate guards, never gated itself"
     assert f"published v{version}: " in result.stdout
 
     deleted = re.findall(r"^gh release delete (\S+) ", log, re.M)

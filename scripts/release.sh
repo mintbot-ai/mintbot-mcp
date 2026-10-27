@@ -21,6 +21,12 @@
 # release is never a GitHub pre-release: it becomes the repository's "latest",
 # which is what a bare repository URL installs.
 #
+# A release on the package's own channel is a PROMOTION of a dev build that
+# DEV's Beaver package journey has installed, upgraded to and exercised:
+# AXP_PROMOTE_FROM names it and the promote gate below checks the evidence
+# first. The whole flow: developer_tools/agent_skills/axp_package_release.md
+# in the mintbot repository.
+#
 # scripts/release-dev.sh runs this script on a scratch export of one commit
 # (RELEASE_TREE), on the dev channel (AXP_CHANNEL), with the dev key
 # (AXP_SIGNING_KEY_ID) checked against the DEV key directory (AXP_KEYDIR). By
@@ -34,6 +40,29 @@ TREE="${RELEASE_TREE:-${ROOT}}"
 KEY="${AXP_SIGNING_KEY:?set AXP_SIGNING_KEY to the publisher private key (never commit it)}"
 command -v axp >/dev/null 2>&1 || { echo "release: the axp CLI is required (pip install -e ../agent-extension)" >&2; exit 1; }
 KEYDIR="${AXP_KEYDIR:-${TREE}/agent-extension-keys.json}"
+CHANNEL="${AXP_CHANNEL:-$(python3 -c 'import json, sys; print(json.load(open(sys.argv[1]))["release"]["channel"])' "${TREE}/agent-extension.json")}"
+
+# The promote gate: a release on the package's own channel (the one LIVE
+# agents install) names the dev build it promotes (AXP_PROMOTE_FROM), and the
+# mintbot repository's developer_tools/axp_promote_check.py confirms the
+# evidence (the build exists, this checkout is its commit, a green DEV Beaver
+# package journey ran on it) before anything is stamped or signed. MINTBOT_REPO
+# locates that checkout (default ../mintbot), AXP_PROMOTE_CHECK the script.
+# Playbook: developer_tools/agent_skills/axp_package_release.md there.
+if [ "${CHANNEL}" != "dev" ]; then
+  PROMOTE_FROM="${AXP_PROMOTE_FROM:?set AXP_PROMOTE_FROM to the dev build this release promotes (developer_tools/agent_skills/axp_package_release.md in the mintbot repository)}"
+  case "${PROMOTE_FROM}" in
+    "${VERSION}-dev."*) ;;
+    *) printf 'release: %s is not a dev build of %s\n' "${PROMOTE_FROM}" "${VERSION}" >&2; exit 1 ;;
+  esac
+  if [ -n "$(git -C "${TREE}" status --porcelain)" ]; then
+    printf 'release: the checkout has uncommitted changes; promote the dev build'"'"'s commit as it was published\n' >&2
+    exit 1
+  fi
+  GATE="${AXP_PROMOTE_CHECK:-${MINTBOT_REPO:-${ROOT}/../mintbot}/developer_tools/axp_promote_check.py}"
+  test -f "${GATE}" || { printf 'release: the promote gate %s is missing (set MINTBOT_REPO or AXP_PROMOTE_CHECK)\n' "${GATE}" >&2; exit 1; }
+  python3 "${GATE}" --package mintbot-mcp --version "${PROMOTE_FROM}" --commit "$(git -C "${TREE}" rev-parse HEAD)"
+fi
 
 # Signing with a key other than the manifest's own (scripts/release-dev.sh
 # signs with the dev key): its key directory entry becomes the signing block.
@@ -87,7 +116,6 @@ data.setdefault("release", {})["changelog"] = f"https://github.com/mintbot-ai/mi
 path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 PY
 
-CHANNEL="${AXP_CHANNEL:-$(python3 -c 'import json, sys; print(json.load(open(sys.argv[1]))["release"]["channel"])' "${TREE}/agent-extension.json")}"
 ARTIFACT="$("${TREE}/scripts/build-artifact.sh" "${VERSION}" | cut -d" " -f3)"
 axp release "${TREE}/agent-extension.json" \
   --version "${VERSION}" \

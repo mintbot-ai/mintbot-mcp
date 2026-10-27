@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- `scripts/release.sh` gates a release on the package's own channel: it names
+  the dev build it promotes (`AXP_PROMOTE_FROM`), refuses a dirty checkout,
+  and the mintbot repository's promote check must confirm a green DEV Beaver
+  package journey on that build before anything is signed. `AGENTS.md` points
+  at the flow. The dev key directory lists the Desktop dev key as well.
+
 ## v0.1.4 (2026-10-27)
 
 - The public address is `https://www.<agent>.mintbot.ai/mcp/`: the agent's
