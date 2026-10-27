@@ -12,7 +12,9 @@ mintbot-mcp access revoke GRANT_ID
 
 `issue` prints JSON containing the grant ID, expiry (Unix timestamp), policy and a
 `token`. The token is shown only once. Put that token, not the owner token, in the
-client's `Authorization` header with the `Bearer` scheme. Use TLS remotely.
+client's `Authorization` header with the `Bearer` scheme. Remotely, use the
+public address `https://www.<agent host>/mcp/` (TLS, relayed by the agent's
+public site) or an SSH tunnel; never plain HTTP across the network.
 Revoking an unknown ID exits with status 2. Lifetime accepts an integer number of
 seconds or an integer followed by `s`, `m`, `h`, `d`; it is required and capped at
 365 days. Reissue rather than extending or silently refreshing a grant.

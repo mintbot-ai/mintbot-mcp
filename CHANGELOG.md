@@ -1,7 +1,20 @@
 # Changelog
 
-## Unreleased
+## v0.1.4 (2026-10-27)
 
+- The public address is `https://www.<agent>.mintbot.ai/mcp/`: the agent's
+  public site relays it to the loopback endpoint behind the same bearer token
+  (every public service of an agent lives on its public site). The bare host's
+  `/ext/mintbot-mcp/mcp` stays as the legacy address for clients already
+  configured with it; the daemon still listens on `127.0.0.1:8650` only. The
+  README, the after-install note and the panel's Settings -> MCP server
+  summary say so.
+- Private connection notices: after every successful authenticated MCP
+  `initialize` the daemon posts a bounded, secret-free notice to the
+  panel-local companion (`POST /mcp/connections`, as the agent's machine
+  identity); the platform deduplicates it and tells the owner (panel
+  notification and Telegram) which client connected. A failed notice never
+  blocks MCP access. Stable installs before this release sent none.
 - The display name, the credit balance and the model catalog are read through
   the agent's own signing boundary on panel-local (`/plugin/central/...` on
   loopback), which signs each request with the agent's identity key - the way

@@ -211,8 +211,18 @@ prints the `mcpServers` block Claude Desktop, Claude Code and Cursor accept:
 }
 ```
 
-The server listens on loopback only. From your own machine, open an SSH
-tunnel and keep the URL as printed:
+The server listens on loopback only. The agent's public site relays it: from
+anywhere, point the client at
+
+```
+https://www.agent1234.mintbot.ai/mcp/
+```
+
+with the same `Authorization: Bearer <token>` header (the mintbot panel's
+Settings -> MCP server shows this address once the agent's certificate
+carries the `www.` name). The bare host's `/ext/mintbot-mcp/mcp` is the
+legacy address, kept for clients already configured with it. Without the
+relay, open an SSH tunnel and keep the URL as printed:
 
 ```bash
 ssh -N -L 8650:127.0.0.1:8650 root@agent1234.mintbot.ai
