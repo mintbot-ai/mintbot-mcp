@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+- The install hook never builds the private virtualenv with a host's
+  interpreter settings. On a mintbot local computer it ran with the runtime's
+  `PYTHONPATH` (the local API's own httpx, uvicorn, starlette): pip counted
+  those as already satisfied, left them out of the venv, and the hook's own
+  healthcheck failed on `import httpx` ("installer install.sh exited 1").
+  `install.sh` and `healthcheck.sh` now unset `PYTHONPATH`, `PYTHONHOME`,
+  `PYTHONUSERBASE`, `PYTHONSTARTUP`, `PYTHONSAFEPATH`, `VIRTUAL_ENV` (and pip's
+  `PIP_TARGET`/`PIP_PREFIX`/`PIP_USER`/`PIP_REQUIRE_VIRTUALENV` for the install).
+- tests: the dev-build workflow test follows the workflow (push and
+  `workflow_dispatch`, no release event since `ecb11cb`).
+
 ## v0.1.5 (2026-10-27)
 
 - `.github/workflows/dev-build.yml` reports every published dev build to DEV

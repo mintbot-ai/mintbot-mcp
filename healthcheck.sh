@@ -5,6 +5,9 @@ set -euo pipefail
 
 unhealthy() { printf 'unhealthy: %s\n' "$*"; exit 1; }
 unknown()   { printf 'unknown: %s\n' "$*"; exit 2; }
+# Judge the release's own runtime, never a host's interpreter settings
+# (install.sh says why).
+unset PYTHONPATH PYTHONHOME PYTHONUSERBASE PYTHONSTARTUP PYTHONSAFEPATH VIRTUAL_ENV
 
 # ---- host <-> script contract (AXP SPEC section 6) ---------------------------
 # Every AXP_* variable is optional: an AXP host sets them, a human running the

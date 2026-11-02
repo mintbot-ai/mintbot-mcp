@@ -12,6 +12,14 @@ set -euo pipefail
 
 log() { printf '[mintbot-mcp] %s\n' "$*"; }
 die() { log "ERROR: $*" >&2; exit 1; }
+# The private virtualenv must hold every dependency itself. A host process may
+# hand down its own interpreter settings: a mintbot local computer runs this
+# hook from an API whose PYTHONPATH names the API's own packages (httpx,
+# uvicorn, starlette...). pip then counts those as "already satisfied", never
+# installs them into the venv, and the healthcheck -- which pins PYTHONPATH to
+# the release -- fails on `import httpx`. Nothing below needs any of these.
+unset PYTHONPATH PYTHONHOME PYTHONUSERBASE PYTHONSTARTUP PYTHONSAFEPATH PYTHONNOUSERSITE VIRTUAL_ENV \
+  PIP_TARGET PIP_PREFIX PIP_USER PIP_REQUIRE_VIRTUALENV
 PYTHON="${MINTBOT_MCP_PYTHON:-python3}"
 command -v "${PYTHON}" >/dev/null 2>&1 || die "python3 is required (Debian: apt install python3 python3-venv)"
 SOURCE_DIR="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"

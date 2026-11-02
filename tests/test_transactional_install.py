@@ -242,3 +242,31 @@ def test_host_disabled_state_is_untouched_on_success(tmp_path):
     assert _run(REPO / "upgrade.sh", env=env).returncode == 0
     assert disabled.read_bytes() == before
     assert not Path(env["FAKE_LOG"]).exists(), "host owns enablement and service restart"
+
+
+def test_a_hosts_interpreter_settings_never_reach_pip(tmp_path):
+    """A mintbot local computer runs the hook from an API whose PYTHONPATH
+    names the API's own httpx/uvicorn: pip counted them as installed, left
+    them out of the venv, and the release could not import httpx."""
+    env = _env(tmp_path)
+    fake = tmp_path / "bin/python3"
+    fake.write_text(f'''#!/bin/bash
+if [ "$1" = "-m" ] && [ "$2" = "venv" ]; then
+  mkdir -p "$3/bin"
+  printf \'#!/bin/bash\\nexec {sys.executable} "$@"\\n\' > "$3/bin/python"
+  printf \'#!/bin/bash\\nprintf "pip PYTHONPATH=%%s PYTHONHOME=%%s VIRTUAL_ENV=%%s\\\\n" "${{PYTHONPATH-unset}}" "${{PYTHONHOME-unset}}" "${{VIRTUAL_ENV-unset}}" >> "$FAKE_LOG"\\n\' > "$3/bin/pip"
+  chmod 755 "$3/bin/python" "$3/bin/pip"
+  printf "venv PYTHONPATH=%s\\n" "${{PYTHONPATH-unset}}" >> "$FAKE_LOG"
+  exit 0
+fi
+exec {sys.executable} "$@"
+''')
+    fake.chmod(0o755)
+    host_deps = tmp_path / "host-deps"
+    host_deps.mkdir()
+    result = _run(REPO / "install.sh", env={**env, "PYTHONPATH": f"{host_deps}:{tmp_path}/image",
+                                           "VIRTUAL_ENV": str(tmp_path / "hermes-venv")})
+    assert result.returncode == 0, result.stdout + result.stderr
+    log = Path(env["FAKE_LOG"]).read_text()
+    assert "venv PYTHONPATH=unset" in log
+    assert "pip PYTHONPATH=unset PYTHONHOME=unset VIRTUAL_ENV=unset" in log
