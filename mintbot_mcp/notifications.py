@@ -18,7 +18,13 @@ class ConnectionNotifier:
 
     async def __call__(self, payload: dict) -> None:
         info = payload.get('client_info') or {}
+        # The companion renders the owner's notice from this: which
+        # credential (the owner token, or a limited grant by its name) and
+        # what the connecting program calls itself. The peer is the ASGI
+        # client, loopback behind nginx or an SSH tunnel.
         body = {'credential_id': payload['credential_id'],
+                'credential_name': str(payload.get('credential_name') or '')[:80],
+                'owner': bool(payload.get('owner', payload['credential_id'] == 'owner')),
                 'client_name': info.get('name') or 'Unknown MCP client',
                 'client_version': str(info.get('version') or '')[:80],
                 'peer_address': str(payload.get('peer') or '')[:64]}

@@ -73,6 +73,7 @@ class AccessMiddleware:
                 notice = {
                     'credential_id': principal.credential_id,
                     'credential_name': principal.name,
+                    'owner': principal.owner,
                     'connection_id': secrets.token_hex(16),
                     'client_info': {key: bounded(info.get(key, '')) for key in ('name', 'version')},
                     'peer': bounded((scope.get('client') or ('unknown',))[0]),

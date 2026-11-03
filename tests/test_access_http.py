@@ -88,6 +88,7 @@ async def test_successful_initialize_notifies_once_with_bounded_observed_peer(tm
         notice = notices[0]
         assert notice['credential_id'] == grant['id']
         assert notice['credential_name'] == 'Guest'
+        assert notice['owner'] is False
         assert notice['client_info'] == {'name': 'Test', 'version': '1'}
         assert notice['peer'] == '127.0.0.1'
         assert notice['peer_provenance'] == 'asgi-client'

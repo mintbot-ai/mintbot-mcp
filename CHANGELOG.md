@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- The connection notice names the credential. The `initialize` notice sent
+  to the agent's companion (`/mcp/connections`) now carries
+  `credential_name` ("Owner", or a grant's label) and `owner` next to the
+  credential id, so the owner reads *which* credential a client connected
+  with instead of a fingerprint of it.
+
 - The install hook never builds the private virtualenv with a host's
   interpreter settings. On a mintbot local computer it ran with the runtime's
   `PYTHONPATH` (the local API's own httpx, uvicorn, starlette): pip counted

@@ -107,5 +107,5 @@ async def test_notifier_maps_metadata_to_companion_contract(settings):
                     'peer': '127.0.0.1', 'peer_provenance': 'asgi-client'})
     request = requests[0]
     assert request.headers['authorization'] == 'Bearer hermes-key'
-    assert json.loads(request.content) == {'credential_id': 'grant', 'client_name': 'Õun',
-                                          'client_version': '1', 'peer_address': '127.0.0.1'}
+    assert json.loads(request.content) == {'credential_id': 'grant', 'credential_name': '', 'owner': False,
+                                          'client_name': 'Õun', 'client_version': '1', 'peer_address': '127.0.0.1'}
