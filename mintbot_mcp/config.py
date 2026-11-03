@@ -1,10 +1,11 @@
 """Where the daemon finds the agent it serves.
 
-Everything comes from files that already exist on a mintbot agent VPS:
-``$HERMES_HOME/env`` (the Hermes API key and port), ``$HERMES_HOME/config.yaml``
-(the agent id in its ``mintbot:`` block) and the extension's own state dir (the
-bearer token MCP clients present). Nothing is configured twice, and nothing
-here talks to the network.
+Everything comes from files that already exist on a mintbot agent:
+``$HERMES_HOME/env`` (ports and agent metadata), ``$HERMES_HOME/config.yaml``
+(the agent id in its ``mintbot:`` block), the host's rotating local identity
+and the extension's own state dir (the bearer token MCP clients present).
+The opt-in ``MINTBOT_AGENT_HOME`` layout supports local computers as well as
+VPS installations. Nothing here talks to the network.
 """
 from __future__ import annotations
 
@@ -34,10 +35,33 @@ def hermes_home() -> Path:
         value = os.environ.get(key)
         if value:
             return Path(value)
-    # A host-owned unit points HOME at the state dir; the agent itself lives under root.
+    root = _agent_home()
+    if root is not None:
+        return root / "hermes-home"
+    # A host-owned VPS unit points HOME at the state dir; the agent lives under root.
     if os.geteuid() == 0:
         return Path("/root/.hermes")
     return Path.home() / ".hermes"
+
+
+def _agent_home() -> Path | None:
+    """The host's opt-in local layout, with the same validation as mintbot."""
+    raw = os.environ.get("MINTBOT_AGENT_HOME")
+    if raw is None:
+        return None
+    root = Path(raw)
+    if not raw or not root.is_absolute() or ".." in root.parts or root == Path("/"):
+        raise ConfigError("MINTBOT_AGENT_HOME must be an absolute, non-root path without '..'")
+    return root
+
+
+def local_credentials_file() -> Path:
+    override = os.environ.get("MINTBOT_MCP_LOCAL_CREDENTIALS_FILE")
+    if override:
+        return Path(override)
+    root = _agent_home()
+    state = root / "state" if root is not None else Path("/var/lib/mintbot-agent")
+    return state / "security/local_credentials.json"
 
 
 def state_dir() -> Path:
@@ -96,6 +120,8 @@ class Settings:
         import json
         try:
             state = json.loads(self.local_credentials_file.read_text(encoding="utf-8"))
+            if not isinstance(state, dict):
+                raise ValueError("invalid local identity")
             entry = state["pending"] if state.get("activated") else state["current"]
             key = entry["hermes"]
             if not isinstance(key, str) or not key:
@@ -117,16 +143,14 @@ def load_settings(*, home: Path | None = None) -> Settings:
         or env.get("PROXY_TOKEN")
         or ""
     )
-    if not api_key:
-        raise ConfigError(f"no API_SERVER_KEY in {home / 'env'}; is this a mintbot agent VPS?")
     hermes_port = env.get("API_SERVER_PORT") or str(HERMES_API_PORT)
     mintbot = _mintbot_block(home / "config.yaml")
-    agent_raw = mintbot.get("agent_id") or env.get("AGENT_ID")
+    agent_raw = mintbot.get("agent_id") or env.get("MINTBOT_AGENT_ID") or env.get("AGENT_ID")
     try:
         agent_id = int(agent_raw) if agent_raw not in (None, "") else None
     except (TypeError, ValueError):
         agent_id = None
-    return Settings(
+    settings = Settings(
         hermes_url=os.environ.get("MINTBOT_MCP_HERMES_URL") or f"http://127.0.0.1:{hermes_port}",
         hermes_api_key=api_key,
         local_api_url=os.environ.get("MINTBOT_MCP_LOCAL_API_URL") or f"http://127.0.0.1:{LOCAL_API_PORT}",
@@ -134,9 +158,19 @@ def load_settings(*, home: Path | None = None) -> Settings:
         token_file=token_file(),
         host=os.environ.get("MINTBOT_MCP_HOST") or DEFAULT_HOST,
         port=int(os.environ.get("MINTBOT_MCP_PORT") or DEFAULT_PORT),
-        local_credentials_file=Path(os.environ.get("MINTBOT_MCP_LOCAL_CREDENTIALS_FILE")
-                                    or "/var/lib/mintbot-agent/security/local_credentials.json"),
+        local_credentials_file=local_credentials_file(),
     )
+    if not api_key:
+        # Modern installations have no legacy API_SERVER_KEY. Bootstrap from
+        # the rotating identity; backend requests still re-read it each time.
+        try:
+            settings = dataclasses.replace(settings, hermes_api_key=settings.local_key())
+        except ConfigError:
+            raise ConfigError(
+                f"no active local identity at {settings.local_credentials_file} "
+                f"or API_SERVER_KEY in {home / 'env'}; is this a mintbot agent installation?"
+            ) from None
+    return settings
 
 
 def _mintbot_block(path: Path) -> dict:

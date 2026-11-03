@@ -1,6 +1,7 @@
 """Settings come from files that already exist on a mintbot agent VPS."""
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
 
@@ -36,6 +37,28 @@ def test_load_settings_from_a_mintbot_agent_home(tmp_path: Path, monkeypatch):
     assert s.agent_id == 1091
     assert not hasattr(s, "panel_token"), "central is reached through panel-local; the panel token is never read"
     assert (s.host, s.port) == ("127.0.0.1", 8650)
+
+
+@pytest.mark.parametrize("activated", [False, True])
+def test_local_install_starts_without_a_legacy_api_key(tmp_path: Path, monkeypatch, activated):
+    root = tmp_path / "local-agent"
+    home = write_home(root / "hermes-home", env="MINTBOT_AGENT_ID=9019\n")
+    credentials = root / "state/security/local_credentials.json"
+    credentials.parent.mkdir(parents=True)
+    credentials.write_text(json.dumps({"current": {"hermes": "current-key"},
+                                       "pending": {"hermes": "pending-key"}, "activated": activated}))
+    monkeypatch.setenv("MINTBOT_AGENT_HOME", str(root))
+    monkeypatch.setenv("HERMES_HOME", str(home))
+    monkeypatch.delenv("MINTBOT_MCP_HERMES_API_KEY", raising=False)
+    monkeypatch.delenv("MINTBOT_MCP_LOCAL_CREDENTIALS_FILE", raising=False)
+
+    settings = config.load_settings()
+
+    assert settings.agent_id == 9019
+    assert settings.local_credentials_file == credentials
+    assert settings.hermes_api_key == settings.local_key() == ("pending-key" if activated else "current-key")
+    assert settings.hermes_url == "http://127.0.0.1:8642"
+    assert settings.local_api_url == "http://127.0.0.1:8643"
 
 
 def test_load_settings_without_config(tmp_path: Path, monkeypatch):

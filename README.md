@@ -187,8 +187,16 @@ only a previously active unit and preserve existing enablement/stopped state;
 only a first standalone installation enables and starts its new unit.
 The shell lifecycle tools target Linux (Bash, GNU coreutils and `flock`).
 
-The daemon expects a mintbot agent VPS: the Hermes API server on `:8642`
-(`API_SERVER_KEY` in `$HERMES_HOME/env`) and `mintbot-panel-local` on `:8643`.
+The daemon expects the agent's Hermes API server on `:8642` and
+`mintbot-panel-local` on `:8643`, on either a VPS or a local computer.
+It uses the existing rotating identity, not a required legacy `API_SERVER_KEY`:
+`/var/lib/mintbot-agent/security/local_credentials.json` on a VPS, or
+`$MINTBOT_AGENT_HOME/state/security/local_credentials.json` on a local install.
+Local host-owned units supply `MINTBOT_AGENT_HOME` and `HERMES_HOME`; if only
+the former is set, Hermes home defaults to `$MINTBOT_AGENT_HOME/hermes-home`.
+An explicit `MINTBOT_MCP_LOCAL_CREDENTIALS_FILE` takes precedence on either layout.
+The active identity is re-read on every backend request, so key rotation needs
+no daemon restart. A missing or malformed identity fails closed.
 `mintbot-mcp check` tells you which backends it can reach.
 
 ## Connect a client

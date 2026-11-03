@@ -4,6 +4,7 @@ what was sent. Nothing here opens a socket."""
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable
@@ -13,6 +14,14 @@ import pytest
 
 from mintbot_mcp.config import Settings
 from mintbot_mcp.server import Backends, build_server, make_backends
+
+
+@pytest.fixture(autouse=True)
+def isolated_installation(monkeypatch):
+    """Never discover the running agent's identity or extension state in tests."""
+    for key in tuple(os.environ):
+        if key.startswith(("MINTBOT_MCP_", "AXP_")) or key in ("MINTBOT_AGENT_HOME", "HERMES_HOME"):
+            monkeypatch.delenv(key, raising=False)
 
 
 @dataclass
