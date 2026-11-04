@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.1.6 (2026-11-04)
 
 - The connection notice names the credential. The `initialize` notice sent
   to the agent's companion (`/mcp/connections`) now carries
