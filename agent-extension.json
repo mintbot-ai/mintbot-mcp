@@ -4,7 +4,7 @@
   "identity": {
     "publisher": "mintbot.ai",
     "name": "mintbot-mcp",
-    "version": "0.1.6",
+    "version": "0.1.7",
     "display_name": "mintbot MCP server",
     "description": "An MCP server on your agent's own server: chat with the agent and manage its settings from Claude Desktop, Claude Code, Cursor or any MCP client.",
     "author": "mintbot.ai",
@@ -73,13 +73,13 @@
   },
   "release": {
     "channel": "beta",
-    "changelog": "https://github.com/mintbot-ai/mintbot-mcp/releases/tag/v0.1.6",
+    "changelog": "https://github.com/mintbot-ai/mintbot-mcp/releases/tag/v0.1.7",
     "artifact": {
-      "url": "https://github.com/mintbot-ai/mintbot-mcp/releases/download/v0.1.6/mintbot-mcp-0.1.6.tar.gz",
-      "sha256": "d11bd451daf3ca514662232cc5b6a9bbd04ce7135dd764f6a7e9b7f821fdbfba"
+      "url": "https://github.com/mintbot-ai/mintbot-mcp/releases/download/v0.1.7/mintbot-mcp-0.1.7.tar.gz",
+      "sha256": "100c51723d7f6947cd9702b711bff32e65b868cc5351785e7cfb00c0fb3e97df"
     },
-    "published_at": "2026-11-04T22:30:28Z",
-    "valid_until": "2027-05-03T22:30:28Z"
+    "published_at": "2026-11-09T16:55:29Z",
+    "valid_until": "2027-05-08T16:55:29Z"
   },
   "updates": {
     "source": {
@@ -105,8 +105,8 @@
       "enforcement": "advisory",
       "delivery": {
         "method": "archive",
-        "url": "https://github.com/mintbot-ai/mintbot-mcp/releases/download/v0.1.6/mintbot-mcp-0.1.6.tar.gz",
-        "sha256": "d11bd451daf3ca514662232cc5b6a9bbd04ce7135dd764f6a7e9b7f821fdbfba"
+        "url": "https://github.com/mintbot-ai/mintbot-mcp/releases/download/v0.1.7/mintbot-mcp-0.1.7.tar.gz",
+        "sha256": "100c51723d7f6947cd9702b711bff32e65b868cc5351785e7cfb00c0fb3e97df"
       },
       "lifecycle": {
         "install": "install.sh",
@@ -126,5 +126,5 @@
       }
     }
   ],
-  "signature": "elEbD3Hge9qS3GDuz4Ct5+7HRia8LH82QY8FtmknB9SER4Uq1wsIVfPAkpFFJrXjZuOp3fhJwEPxR/4hgRaBCA=="
+  "signature": "zm9xW/LVb4cglZnbZnc44o6vxnG3JnxopVkWj9StAuu4w5wdjVVJ68EDH6TNoHhyEQYnFvVafKWbvOyypyjBCw=="
 }
