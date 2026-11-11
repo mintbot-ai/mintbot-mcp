@@ -4,7 +4,7 @@
   "identity": {
     "publisher": "mintbot.ai",
     "name": "mintbot-mcp",
-    "version": "0.1.7",
+    "version": "0.1.8",
     "display_name": "mintbot MCP server",
     "description": "An MCP server on your agent's own server: chat with the agent and manage its settings from Claude Desktop, Claude Code, Cursor or any MCP client.",
     "author": "mintbot.ai",
@@ -73,13 +73,13 @@
   },
   "release": {
     "channel": "beta",
-    "changelog": "https://github.com/mintbot-ai/mintbot-mcp/releases/tag/v0.1.7",
+    "changelog": "https://github.com/mintbot-ai/mintbot-mcp/releases/tag/v0.1.8",
     "artifact": {
-      "url": "https://github.com/mintbot-ai/mintbot-mcp/releases/download/v0.1.7/mintbot-mcp-0.1.7.tar.gz",
-      "sha256": "100c51723d7f6947cd9702b711bff32e65b868cc5351785e7cfb00c0fb3e97df"
+      "url": "https://github.com/mintbot-ai/mintbot-mcp/releases/download/v0.1.8/mintbot-mcp-0.1.8.tar.gz",
+      "sha256": "f2e0e37ab79df69e9e160dcf0c2e216d580bbcdf6780a27f58d844c53fb5bb02"
     },
-    "published_at": "2026-11-09T16:55:29Z",
-    "valid_until": "2027-05-08T16:55:29Z"
+    "published_at": "2026-11-11T17:30:15Z",
+    "valid_until": "2027-05-10T17:30:15Z"
   },
   "updates": {
     "source": {
@@ -105,8 +105,8 @@
       "enforcement": "advisory",
       "delivery": {
         "method": "archive",
-        "url": "https://github.com/mintbot-ai/mintbot-mcp/releases/download/v0.1.7/mintbot-mcp-0.1.7.tar.gz",
-        "sha256": "100c51723d7f6947cd9702b711bff32e65b868cc5351785e7cfb00c0fb3e97df"
+        "url": "https://github.com/mintbot-ai/mintbot-mcp/releases/download/v0.1.8/mintbot-mcp-0.1.8.tar.gz",
+        "sha256": "f2e0e37ab79df69e9e160dcf0c2e216d580bbcdf6780a27f58d844c53fb5bb02"
       },
       "lifecycle": {
         "install": "install.sh",
@@ -126,5 +126,5 @@
       }
     }
   ],
-  "signature": "zm9xW/LVb4cglZnbZnc44o6vxnG3JnxopVkWj9StAuu4w5wdjVVJ68EDH6TNoHhyEQYnFvVafKWbvOyypyjBCw=="
+  "signature": "ihFBrKPiTLtaLO4QMrurqBV/twiLVmG6NzoMSnZ0HDaJ4Vh8N5XEm0j4btr0FZUZJjlo1QOfkKKDfEUUnYSaAg=="
 }
