@@ -23,7 +23,7 @@
       {
         "name": "mcp",
         "kind": "daemon",
-        "summary": "Streamable-HTTP MCP server on loopback (bearer-authenticated), relayed by the agent's public site at https://www.<agent>.mintbot.ai/mcp/: chat with the agent and read or change every mintbot setting.",
+        "summary": "Streamable-HTTP MCP server on loopback (bearer-authenticated), relayed by the agent's own host at https://<agent>.mintbot.ai/mcp/: chat with the agent and read or change every mintbot setting.",
         "endpoint": "http://127.0.0.1:8650/mcp",
         "auth": {
           "scheme": "bearer",
@@ -33,12 +33,12 @@
     ],
     "settings_section": {
       "title": "MCP server",
-      "summary": "Connect Claude Desktop, Claude Code, Cursor or any other MCP client to your agent: chat with it and read or change its settings from there. Reachable at https://www.<agent>.mintbot.ai/mcp/ behind a bearer token; the owner is notified of every new connection.",
+      "summary": "Connect Claude Desktop, Claude Code, Cursor or any other MCP client to your agent: chat with it and read or change its settings from there. Reachable at https://<agent>.mintbot.ai/mcp/ behind a bearer token; the owner is notified of every new connection.",
       "icon": "plug",
       "localized": {
         "et": {
           "title": "MCP-server",
-          "summary": "Ühenda Claude Desktop, Claude Code, Cursor või mõni muu MCP-klient oma agendiga: vestle temaga ja vaata või muuda sealt tema seadeid. Kättesaadav aadressil https://www.<agent>.mintbot.ai/mcp/ bearer-tokeni taga; omanik saab igast uuest ühendusest teate."
+          "summary": "Ühenda Claude Desktop, Claude Code, Cursor või mõni muu MCP-klient oma agendiga: vestle temaga ja vaata või muuda sealt tema seadeid. Kättesaadav aadressil https://<agent>.mintbot.ai/mcp/ bearer-tokeni taga; omanik saab igast uuest ühendusest teate."
         }
       }
     }
@@ -126,5 +126,5 @@
       }
     }
   ],
-  "signature": "dtyNgMtu5Y/r8M16hu/S083LSut28mRq1wzw6ZyaevPt016D+Xg5drBJsWvwMm5mbXck4M4EytCS/H2EPF8dBA=="
+  "signature": "qjMTSfbQZpvDXYJa2SSp2G3ZxYZ2ZuA/se4szcn/kANOie/sOdCpjaQhJf/7Y74T3GAoC9MGk+ABS8ShOuIoDw=="
 }

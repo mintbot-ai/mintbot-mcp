@@ -1,10 +1,9 @@
 # mintbot MCP server installed
 
 The server listens on `http://127.0.0.1:8650/mcp` on this VPS and accepts only
-requests that carry its bearer token. The agent's public site relays it at
-`https://www.<your agent host>/mcp/` behind the same bearer token (the bare
-host's `/ext/mintbot-mcp/mcp` is the legacy address); the daemon itself never
-listens on a public interface.
+requests that carry its bearer token. The agent's own host relays it at
+`https://<your agent host>/mcp/` behind the same bearer token; the daemon
+itself never listens on a public interface.
 
 Get a ready-to-paste client configuration (Claude Desktop, Claude Code, Cursor):
 
@@ -12,7 +11,7 @@ Get a ready-to-paste client configuration (Claude Desktop, Claude Code, Cursor):
 /opt/mintbot-mcp/bin/mintbot-mcp client-config
 ```
 
-Point the MCP client at `https://www.<your agent host>/mcp/`, or reach the
+Point the MCP client at `https://<your agent host>/mcp/`, or reach the
 loopback endpoint from your own machine through an SSH tunnel:
 
 ```bash
