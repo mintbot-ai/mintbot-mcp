@@ -3,12 +3,10 @@
 ## v0.1.10
 
 - The public address is `https://<agent>.mintbot.ai/mcp/`, on the agent's own
-  host: an agent's public site no longer lives on a `www.` name. The README,
-  the after-install note, the access guide and the panel's Settings -> MCP
-  server summary name the host itself. The addresses handed out earlier
-  (`https://www.<agent>.mintbot.ai/mcp/` and the host's
-  `/ext/mintbot-mcp/mcp`) keep answering for clients already configured with
-  them; the daemon still listens on `127.0.0.1:8650` only.
+  host. The README, the after-install note, the access guide and the panel's
+  Settings -> MCP server summary name it. The host's `/ext/mintbot-mcp/mcp`
+  keeps answering for clients already configured with it; the daemon still
+  listens on `127.0.0.1:8650` only.
 
 ## v0.1.6 (2026-11-04)
 
