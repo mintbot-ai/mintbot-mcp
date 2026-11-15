@@ -4,7 +4,7 @@
   "identity": {
     "publisher": "mintbot.ai",
     "name": "mintbot-mcp",
-    "version": "0.1.9",
+    "version": "0.1.10",
     "display_name": "mintbot MCP server",
     "description": "An MCP server on your agent's own server: chat with the agent and manage its settings from Claude Desktop, Claude Code, Cursor or any MCP client.",
     "author": "mintbot.ai",
@@ -73,13 +73,13 @@
   },
   "release": {
     "channel": "beta",
-    "changelog": "https://github.com/mintbot-ai/mintbot-mcp/releases/tag/v0.1.9",
+    "changelog": "https://github.com/mintbot-ai/mintbot-mcp/releases/tag/v0.1.10",
     "artifact": {
-      "url": "https://github.com/mintbot-ai/mintbot-mcp/releases/download/v0.1.9/mintbot-mcp-0.1.9.tar.gz",
-      "sha256": "d078deeb55c80a73c6af8fc143b898f46d44fc2bc00797ad5b70907263d714a7"
+      "url": "https://github.com/mintbot-ai/mintbot-mcp/releases/download/v0.1.10/mintbot-mcp-0.1.10.tar.gz",
+      "sha256": "c7dc25a441984244067c4f27091d39e6c67bb68b52528cf9d454a6f7a329ef3b"
     },
-    "published_at": "2026-11-11T18:09:33Z",
-    "valid_until": "2027-05-10T18:09:33Z"
+    "published_at": "2026-11-15T18:08:25Z",
+    "valid_until": "2027-05-14T18:08:25Z"
   },
   "updates": {
     "source": {
@@ -105,8 +105,8 @@
       "enforcement": "advisory",
       "delivery": {
         "method": "archive",
-        "url": "https://github.com/mintbot-ai/mintbot-mcp/releases/download/v0.1.9/mintbot-mcp-0.1.9.tar.gz",
-        "sha256": "d078deeb55c80a73c6af8fc143b898f46d44fc2bc00797ad5b70907263d714a7"
+        "url": "https://github.com/mintbot-ai/mintbot-mcp/releases/download/v0.1.10/mintbot-mcp-0.1.10.tar.gz",
+        "sha256": "c7dc25a441984244067c4f27091d39e6c67bb68b52528cf9d454a6f7a329ef3b"
       },
       "lifecycle": {
         "install": "install.sh",
@@ -126,5 +126,5 @@
       }
     }
   ],
-  "signature": "qjMTSfbQZpvDXYJa2SSp2G3ZxYZ2ZuA/se4szcn/kANOie/sOdCpjaQhJf/7Y74T3GAoC9MGk+ABS8ShOuIoDw=="
+  "signature": "870AIW/MtNlO/VCHE973Vxsi4XllsD3GjASNnrcGu3b9V3pIJesjuKgcC1Pm1gPFO4xH0/3frt0eHtSg9x7AAw=="
 }
